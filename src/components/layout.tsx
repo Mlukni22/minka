@@ -19,18 +19,22 @@ interface CardProps {
   children: ReactNode;
   className?: string;
   hover?: boolean;
+  onClick?: () => void;
 }
 
-export function Card({ children, className = '', hover = true }: CardProps) {
+export function Card({ children, className = '', hover = true, onClick }: CardProps) {
   const hoverClasses = hover 
     ? 'hover:shadow-xl hover:scale-105 transition-all duration-300' 
     : '';
   
   return (
-    <div className={`
-      bg-white rounded-2xl shadow-lg border border-orange-100 
-      p-6 backdrop-blur-sm ${hoverClasses} ${className}
-    `}>
+    <div 
+      className={`
+        bg-white rounded-2xl shadow-lg border border-orange-100 
+        p-6 backdrop-blur-sm ${hoverClasses} ${className}
+      `}
+      onClick={onClick}
+    >
       {children}
     </div>
   );

@@ -44,7 +44,7 @@ export function StoryCard({ story, onSelect }: StoryCardProps) {
             </div>
             
             <div className="text-xs text-gray-500 text-center">
-              {completedChapters}/{totalChapters} chapters completed
+              0/{totalChapters} chapters completed
             </div>
           </div>
         </div>
@@ -113,24 +113,16 @@ interface StoryReaderProps {
 }
 
 export function StoryReader({ chapter, onComplete, onNext }: StoryReaderProps) {
-  const [currentContentIndex, setCurrentContentIndex] = useState(0);
   const [showTranslation, setShowTranslation] = useState(false);
   
-  const currentContent = chapter.content[currentContentIndex];
-  const isLastContent = currentContentIndex === chapter.content.length - 1;
-
+  // Chapter content is a simple string
+  const currentContent = { type: 'text' as const, text: chapter.content, translation: undefined };
   const handleNext = () => {
-    if (isLastContent) {
-      onComplete();
-    } else {
-      setCurrentContentIndex(currentContentIndex + 1);
-    }
+    onComplete();
   };
 
   const handlePrevious = () => {
-    if (currentContentIndex > 0) {
-      setCurrentContentIndex(currentContentIndex - 1);
-    }
+    // Not used for single content chapters
   };
 
   return (
@@ -146,7 +138,7 @@ export function StoryReader({ chapter, onComplete, onNext }: StoryReaderProps) {
             {showTranslation ? 'Hide' : 'Show'} Translation
           </Button>
           <div className="text-sm text-gray-500">
-            {currentContentIndex + 1} / {chapter.content.length}
+            Content
           </div>
         </div>
       </div>

@@ -792,22 +792,24 @@ textarea:focus-visible {
 
 .vocab-tooltip {
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 12px);
   left: 50%;
   transform: translateX(-50%) scale(0.9);
-  background: var(--lav-500);
+  background: linear-gradient(135deg, var(--lav-600), var(--lav-500));
   color: white;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 12px;
+  border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
-  white-space: nowrap;
+  min-width: 150px;
+  max-width: 250px;
+  white-space: normal;
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
   transition: all 0.2s ease;
   z-index: 100;
-  box-shadow: 0 4px 12px rgba(123, 106, 245, 0.3);
+  box-shadow: 0 8px 24px rgba(123, 106, 245, 0.4);
 }
 
 .vocab-tooltip::after {
@@ -817,7 +819,7 @@ textarea:focus-visible {
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: var(--lav-500);
+  border-top-color: var(--lav-600);
 }
 
 .vocab-word:hover .vocab-tooltip {
@@ -828,10 +830,11 @@ textarea:focus-visible {
 
 .tooltip-hint {
   font-size: 10px;
-  opacity: 0.8;
-  margin-top: 4px;
+  opacity: 0.9;
+  margin-top: 6px;
+  padding-top: 6px;
   border-top: 1px solid rgba(255,255,255,0.3);
-  padding-top: 4px;
+  font-weight: 400;
 }
 
 /* Notification animations */

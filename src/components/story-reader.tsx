@@ -314,107 +314,171 @@ export function StoryReader({
   const getVocabularyMap = () => {
     const map = new Map<string, string>();
     currentChapter.vocabulary.forEach(item => {
+      // Add exact match
       map.set(item.german.toLowerCase(), item.english);
+      
+      // Also add matches with common variations (with/without capitalization, punctuation)
+      const variations = [
+        item.german.toLowerCase(),
+        item.german.toLowerCase().replace(/[.,!?;:]/g, ''),
+        item.german,
+        item.german.replace(/[.,!?;:]/g, ''),
+      ];
+      
+      variations.forEach(variation => {
+        map.set(variation, item.english);
+      });
     });
     return map;
   };
 
-  // Render text with interactive vocabulary words
+  // Render text with interactive vocabulary words - ALL GERMAN WORDS ARE CLICKABLE
   const renderInteractiveText = (text: string) => {
-    const vocabMap = getVocabularyMap();
-    const words = text.split(/\s+/);
-
-    const handleWordClick = (word: string, translation: string, sentence: string) => {
-      // Find the full vocabulary item
-      const vocabItem = currentChapter.vocabulary.find(
-        v => v.german.toLowerCase() === word.toLowerCase()
-      );
-
-      if (vocabItem) {
-        // Add as cloze sentence flashcard
-        FlashcardSystem.addClozeFlashcard(vocabItem, sentence, story.id, true);
-        
-        // Track word learned
-        if (onWordLearned) {
-          onWordLearned();
-        }
-        
-        // Award XP
-        if (onAwardXP) {
-          onAwardXP(3, t.story.wordAddedToFlashcards);
-        }
-        
-        // Show a brief notification
-        const notification = document.createElement('div');
-        notification.textContent = `✓ "${word}" added to flashcards!`;
-        notification.style.cssText = `
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          background: #41ad83;
-          color: white;
-          padding: 12px 20px;
-          border-radius: 12px;
-          font-weight: 600;
-          z-index: 1000;
-          animation: slideIn 0.3s ease;
-        `;
-        document.body.appendChild(notification);
-        setTimeout(() => {
-          notification.style.animation = 'slideOut 0.3s ease';
-          setTimeout(() => notification.remove(), 300);
-        }, 2000);
+    const vocabItems = currentChapter.vocabulary || [];
+    
+    // Create a map for quick lookup - handle both exact matches and normalized versions
+    const vocabMap = new Map<string, VocabularyItem>();
+    vocabItems.forEach(item => {
+      const normalized = item.german.toLowerCase();
+      vocabMap.set(normalized, item);
+      // Also map without special characters for better matching
+      vocabMap.set(normalized.replace(/[.,!?;:'"]/g, ''), item);
+    });
+    
+    const handleWordClick = (vocabItem: VocabularyItem, sentence: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      
+      // Add as cloze sentence flashcard
+      FlashcardSystem.addClozeFlashcard(vocabItem, sentence, story.id, true);
+      
+      // Track word learned
+      if (onWordLearned) {
+        onWordLearned();
       }
+      
+      // Award XP
+      if (onAwardXP) {
+        onAwardXP(3, t.story.wordAddedToFlashcards);
+      }
+      
+      // Show a brief notification
+      const notification = document.createElement('div');
+      notification.textContent = `✓ "${vocabItem.german}" added to flashcards!`;
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #41ad83;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s';
+        setTimeout(() => notification.remove(), 300);
+      }, 2000);
     };
-
-    return words.map((word, index) => {
-      const cleanWord = word.toLowerCase().replace(/[.,!?;:]/g, '');
-      const translation = vocabMap.get(cleanWord);
-      const punctuation = word.match(/[.,!?;:]$/)?.[0] || '';
-      const displayWord = word.replace(/[.,!?;:]$/, '');
-
-      if (translation) {
-        const isInFlashcards = FlashcardSystem.isWordInFlashcards(cleanWord);
+    
+    // Use a more robust approach: split by spaces and punctuation, but keep them
+    const tokens = text.split(/(\s+|[.,!?;:'"])/);
+    const result: React.ReactNode[] = [];
+    
+    tokens.forEach((token, index) => {
+      // Skip empty tokens and pure whitespace
+      if (!token || !token.trim()) {
+        result.push(token);
+        return;
+      }
+      
+      // Remove punctuation for lookup
+      const cleanToken = token.toLowerCase().replace(/[.,!?;:'"]/g, '').trim();
+      
+      if (!cleanToken) {
+        result.push(token);
+        return;
+      }
+      
+      const vocabItem = vocabMap.get(cleanToken);
+      
+      if (vocabItem) {
+        const isInFlashcards = FlashcardSystem.isWordInFlashcards(cleanToken);
+        const displayText = vocabItem.german;
         
-        return (
-          <span key={index} className="inline-block">
-            <span 
-              className={`vocab-word ${isInFlashcards ? 'in-flashcards' : ''}`}
-              onClick={() => handleWordClick(cleanWord, translation, text)}
-              title={`${translation}${!isInFlashcards ? ' - Click to add to flashcards' : ' - Already in flashcards'}`}
-            >
-              {displayWord}
-              <span className="vocab-tooltip">
-                {translation}
-                {!isInFlashcards && <div className="tooltip-hint">Click to add to flashcards</div>}
-                {isInFlashcards && <div className="tooltip-hint">✓ In flashcards</div>}
-              </span>
+        // Get image path for the word
+        const imagePath = vocabItem.german.toLowerCase().replace(/\s+/g, '-');
+        const imageUrl = `/images/vocabulary/${imagePath}.png`;
+        
+        result.push(
+          <span 
+            key={`vocab-${cleanToken}-${index}`}
+            className={`vocab-word inline-block ${isInFlashcards ? 'in-flashcards' : ''}`}
+            onClick={(e) => handleWordClick(vocabItem, text, e)}
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+            title={`${vocabItem.english}${!isInFlashcards ? ' - Click to add to flashcards' : ' - Already in flashcards'}`}
+          >
+            {displayText}
+            <span className="vocab-tooltip">
+              <div className="flex items-center gap-2">
+                {vocabItem.article && (
+                  <span className="text-xs font-bold text-purple-600">{vocabItem.article}</span>
+                )}
+                <img 
+                  src={imageUrl} 
+                  alt={vocabItem.german}
+                  className="w-12 h-12 object-cover rounded-lg border-2 border-purple-300"
+                  onError={(e) => { 
+                    // Hide image if it doesn't exist
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+              <div className="mt-2 font-semibold">{vocabItem.english}</div>
+              {vocabItem.plural && (
+                <div className="text-xs text-purple-200">Plural: {vocabItem.plural}</div>
+              )}
+              {!isInFlashcards && (
+                <div className="tooltip-hint mt-2">Click to add to flashcards</div>
+              )}
+              {isInFlashcards && (
+                <div className="tooltip-hint mt-2">✓ In flashcards</div>
+              )}
             </span>
-            {punctuation}{' '}
           </span>
         );
+      } else {
+        // Not a vocabulary word, render as-is
+        result.push(<React.Fragment key={`plain-${index}`}>{token}</React.Fragment>);
       }
-
-      return <span key={index}>{word} </span>;
     });
+    
+    return <>{result}</>;
   };
 
   const renderScene = () => {
     const scene = scenes[currentSceneIndex];
     
+    // Get all vocabulary words in the chapter
+    const chapterVocab = currentChapter.vocabulary || [];
+    
     // Check if it's a dialogue scene
     if (scene.includes(':')) {
       const lines = scene.split('\n').filter(line => line.trim());
       return (
-        <motion.div
-          key={currentSceneIndex}
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -50 }}
-          transition={{ duration: 0.5 }}
-          className="card-glass min-h-[400px]"
-        >
-          <ul className="dialogue">
+        <div className="flex gap-6 items-start">
+          <motion.div
+            key={currentSceneIndex}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.5 }}
+            className="card-glass min-h-[400px] flex-1"
+          >
+            <ul className="dialogue">
             {lines.map((line, lineIndex) => {
               if (line.includes(':')) {
                 const [speaker, text] = line.split(':');
@@ -466,32 +530,130 @@ export function StoryReader({
                   className="my-3"
                 >
                   <div className="bg-[#f6f5ff] border border-[#ebe8ff] rounded-2xl px-5 py-3 text-[var(--ink-700)] text-base italic max-w-2xl mx-auto">
-                    {line.trim()}
+                    {renderInteractiveText(line.trim())}
                   </div>
                 </motion.li>
               );
             })}
           </ul>
         </motion.div>
+        {/* Right sidebar with vocabulary */}
+        {chapterVocab.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="w-80 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg sticky top-4 max-h-[600px] overflow-y-auto"
+          >
+            <h3 className="text-lg font-bold text-[#4B3F72] mb-4 flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              New Words
+            </h3>
+            <div className="space-y-3">
+              {chapterVocab.map((item, index) => {
+                const isInFlashcards = FlashcardSystem.isWordInFlashcards(item.german.toLowerCase());
+                return (
+                  <motion.div
+                    key={index}
+                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                      isInFlashcards 
+                        ? 'bg-[#d4f0d6] border-[#9ad8ba]' 
+                        : 'bg-white border-[#ebe8ff] hover:bg-[#f6f5ff]'
+                    }`}
+                    onClick={() => {
+                      FlashcardSystem.addClozeFlashcard(item, scene.trim(), story.id, true);
+                      if (onWordLearned) onWordLearned();
+                      if (onAwardXP) onAwardXP(3, t.story.wordAddedToFlashcards);
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-[#BCA6FF] to-[#9AD8BA] rounded-lg flex items-center justify-center text-2xl">
+                        📝
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold text-[#2E3A28]">{item.german}</div>
+                        <div className="text-sm text-[#6A7A6A]">{item.english}</div>
+                        {isInFlashcards && (
+                          <div className="text-xs text-[#265E40] mt-1">✓ In flashcards</div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+        </div>
       );
     }
     
-    // Regular narration - styled like dialogue
+    // Regular narration - styled like dialogue with vocabulary sidebar
     return (
-      <motion.div
-        key={currentSceneIndex}
-        initial={{ opacity: 0, x: 50 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -50 }}
-        transition={{ duration: 0.5 }}
-        className="card-glass min-h-[400px]"
-      >
-        <div className="p-6">
-          <div className="bg-[#f6f5ff] border border-[#ebe8ff] rounded-2xl p-6 text-[var(--ink-800)] leading-relaxed whitespace-pre-line text-xl max-w-3xl mx-auto">
-            {renderInteractiveText(scene.trim())}
+      <div className="flex gap-6 items-start">
+        {/* Main text content */}
+        <motion.div
+          key={currentSceneIndex}
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -50 }}
+          transition={{ duration: 0.5 }}
+          className="card-glass min-h-[400px] flex-1"
+        >
+          <div className="p-6">
+            <div className="bg-[#f6f5ff] border border-[#ebe8ff] rounded-2xl p-6 text-[var(--ink-800)] leading-relaxed whitespace-pre-line text-xl max-w-3xl mx-auto">
+              {renderInteractiveText(scene.trim())}
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+        
+        {/* Right sidebar with vocabulary */}
+        {chapterVocab.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="w-80 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg sticky top-4 max-h-[600px] overflow-y-auto"
+          >
+            <h3 className="text-lg font-bold text-[#4B3F72] mb-4 flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              New Words
+            </h3>
+            <div className="space-y-3">
+              {chapterVocab.map((item, index) => {
+                const isInFlashcards = FlashcardSystem.isWordInFlashcards(item.german.toLowerCase());
+                return (
+                  <motion.div
+                    key={index}
+                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                      isInFlashcards 
+                        ? 'bg-[#d4f0d6] border-[#9ad8ba]' 
+                        : 'bg-white border-[#ebe8ff] hover:bg-[#f6f5ff]'
+                    }`}
+                    onClick={() => {
+                      FlashcardSystem.addClozeFlashcard(item, scene.trim(), story.id, true);
+                      if (onWordLearned) onWordLearned();
+                      if (onAwardXP) onAwardXP(3, t.story.wordAddedToFlashcards);
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Simple icon instead of image */}
+                      <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-[#BCA6FF] to-[#9AD8BA] rounded-lg flex items-center justify-center text-2xl">
+                        📝
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold text-[#2E3A28]">{item.german}</div>
+                        <div className="text-sm text-[#6A7A6A]">{item.english}</div>
+                        {isInFlashcards && (
+                          <div className="text-xs text-[#265E40] mt-1">✓ In flashcards</div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </div>
     );
   };
 
@@ -878,6 +1040,9 @@ export function StoryReader({
                 onClick={() => {
                   if (onNavigateToVocabulary) {
                     onNavigateToVocabulary();
+                  } else if (onComplete) {
+                    // If no specific navigation handler, go back to home and trigger vocabulary
+                    onComplete();
                   }
                 }}
                 className="btn btn-primary text-lg"

@@ -43,6 +43,7 @@ interface ButtonProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 export function Button({ 
@@ -51,7 +52,8 @@ export function Button({
   variant = 'primary', 
   size = 'md',
   className = '',
-  disabled = false
+  disabled = false,
+  type = 'button'
 }: ButtonProps) {
   const baseClasses = 'font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-orange-300';
   
@@ -73,6 +75,7 @@ export function Button({
   
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled}
       className={`

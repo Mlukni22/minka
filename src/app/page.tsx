@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PlayCircle, ChevronRight, Smile, X, Sparkles, Book, Headphones, Clock, BookOpen, CheckCircle, Volume2, UserPlus } from 'lucide-react';
+import { PlayCircle, ChevronRight, Smile, X, Sparkles, Book, Headphones, Clock, BookOpen, CheckCircle, Volume2 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { StoryEngine } from '@/lib/story-engine';
 import { SRSAlgorithm, SRSVocabularyItem } from '@/lib/srs';
@@ -318,7 +318,6 @@ export default function Home() {
             >
               <span className="text-xl">🐾</span>
             </motion.div>
-            <h1 className="text-3xl font-semibold text-[#6D5B95]">Minka</h1>
           </div>
           <nav className="hidden gap-8 text-[#6D5B95] md:flex" role="navigation" aria-label="Main navigation">
             <a href="#features" className="hover:opacity-80">{t.nav.features}</a>
@@ -355,13 +354,6 @@ export default function Home() {
         </header>
 
         <div className="relative z-10 max-w-5xl mx-auto px-6 pt-12 pb-24 text-center">
-        {/* Logo */}
-        <div className="flex justify-center items-center gap-2 mb-8">
-          <div className="h-10 w-10 rounded-full bg-[#E7E0FF] grid place-items-center animate-pulse">
-            <Smile className="text-[#7B6AF5]" />
-          </div>
-          <h1 className="text-2xl font-bold text-[#7B6AF5]">Minka</h1>
-        </div>
 
         {/* Conditional Content Based on User State */}
         {user ? (
@@ -486,39 +478,24 @@ export default function Home() {
             </>
           ) : (
             /* New User Actions */
-            <>
-              {/* Start Your Journey Button */}
-              <button 
-                className="btn btn-primary text-xl px-10 py-5 relative"
-                style={{ borderRadius: '32px' }}
-                onClick={() => {
-                  const firstStory = storyEngine.getStory('episode-0-hallo');
-                  if (firstStory) {
-                    setSelectedStory(firstStory);
-                    setCurrentState('story');
-                  }
-                }}
-              >
-                <span className="flex items-center gap-3">
-                  <span>Start Your Journey</span>
-                  <span className="text-sm opacity-80">
-                    (Chapter 1)
-                  </span>
+            <button 
+              className="btn btn-primary text-xl px-10 py-5 relative"
+              style={{ borderRadius: '32px' }}
+              onClick={() => {
+                const firstStory = storyEngine.getStory('episode-0-hallo');
+                if (firstStory) {
+                  setSelectedStory(firstStory);
+                  setCurrentState('story');
+                }
+              }}
+            >
+              <span className="flex items-center gap-3">
+                <span>Start Your Journey</span>
+                <span className="text-sm opacity-80">
+                  (Chapter 1)
                 </span>
-              </button>
-              
-              {/* Sign Up Button */}
-              <button 
-                className="btn btn-secondary text-lg px-8 py-4 relative"
-                style={{ borderRadius: '24px' }}
-                onClick={() => setShowAuthModal(true)}
-              >
-                <span className="flex items-center gap-2">
-                  <UserPlus className="h-5 w-5" />
-                  <span>Sign Up Free</span>
-                </span>
-              </button>
-            </>
+              </span>
+            </button>
           )}
         </div>
 
@@ -948,8 +925,8 @@ export default function Home() {
           setSelectedStory(null);
         }}
         onNavigateToVocabulary={() => {
-          // Navigate to vocabulary review (flashcards)
-          setCurrentState('vocabulary');
+          // Navigate to flashcards page
+          window.location.href = '/flashcards';
         }}
         onAwardXP={awardXP}
         onUpdateQuest={updateQuestProgress}

@@ -109,7 +109,7 @@ export function HeatmapCalendar({ className = '' }: HeatmapCalendarProps) {
   }, []);
 
   const generateCalendarDays = () => {
-    const days: JSX.Element[] = [];
+    const days: React.ReactElement[] = [];
     const today = new Date();
     const startDate = new Date(today);
     startDate.setDate(startDate.getDate() - 364); // Show last year
@@ -160,7 +160,7 @@ export function HeatmapCalendar({ className = '' }: HeatmapCalendarProps) {
 
   const getMonthLabels = () => {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const labels: JSX.Element[] = [];
+    const labels: React.ReactElement[] = [];
     
     for (let i = 0; i < 12; i++) {
       labels.push(

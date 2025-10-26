@@ -46,7 +46,7 @@ export function DigitalReader({
   const [selectedWord, setSelectedWord] = useState<Word | null>(null);
   const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
   const [showTranslations, setShowTranslations] = useState(false);
-  const [practiceAnswers, setPracticeAnswers] = useState<Record<number, string>>({});
+  const [practiceAnswers, setPracticeAnswers] = useState<Record<string, string>>({});
   const [showPracticeResults, setShowPracticeResults] = useState(false);
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
   const [currentQuizIndex, setCurrentQuizIndex] = useState(0);

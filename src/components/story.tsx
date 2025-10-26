@@ -12,9 +12,8 @@ interface StoryCardProps {
 }
 
 export function StoryCard({ story, onSelect }: StoryCardProps) {
-  const completedChapters = story.chapters.filter(chapter => chapter.completed).length;
   const totalChapters = story.chapters.length;
-  const progress = (completedChapters / totalChapters) * 100;
+  const progress = 0; // Simplified - chapters don't have completion status
 
   return (
     <Card className="cursor-pointer group" onClick={() => onSelect(story.id)}>

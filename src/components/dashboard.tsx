@@ -59,7 +59,7 @@ export function Dashboard({
   // Award XP function
   const awardXP = (amount: number, reason: string) => {
     const result = LevelSystem.addXP(amount, reason);
-    if (result.leveledUp) {
+    if (result.leveledUp && result.newLevel !== undefined) {
       setLevelUpNotification(result.newLevel);
     }
     setXPNotification({ amount, reason });
@@ -343,10 +343,13 @@ export function Dashboard({
         </motion.div>
 
         {/* Notifications */}
-        <XPNotification 
-          notification={xpNotification} 
-          onComplete={() => setXPNotification(null)} 
-        />
+        {xpNotification && (
+          <XPNotification 
+            amount={xpNotification.amount}
+            reason={xpNotification.reason}
+            onComplete={() => setXPNotification(null)} 
+          />
+        )}
         {levelUpNotification && (
           <LevelUpNotification 
             newLevel={levelUpNotification} 

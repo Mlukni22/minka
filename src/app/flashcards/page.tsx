@@ -50,12 +50,12 @@ type Card = {
 const ALL_VOCABULARY: Word[] = [
   // Episode 0 - Hallo!
   { id: "w-hallo", de: "Hallo", en: "Hello", exDe: "___, Lisa! Ich bin Minka.", exEn: "___, Lisa! I am Minka.", wordType: "other" },
-  { id: "w-wie-heisst-du", de: "Wie heißt du?", en: "What is your name?", exDe: "___", exEn: "___", wordType: "phrase" },
+  { id: "w-wie-heisst-du", de: "Wie heißt du?", en: "What is your name?", exDe: "___, Lisa?", exEn: "___, Lisa?", wordType: "phrase" },
   { id: "w-ich-heisse", de: "Ich heiße", en: "My name is", exDe: "___ Minka.", exEn: "___ Minka.", wordType: "phrase" },
   { id: "w-ich-bin", de: "Ich bin", en: "I am", exDe: "___ Minka.", exEn: "___ Minka.", wordType: "phrase" },
   { id: "w-maus", de: "Maus", en: "mouse", exDe: "Eine kleine ___.", exEn: "A small ___.", article: "die", plural: "Mäuse", wordType: "noun" },
   { id: "w-park", de: "Park", en: "park", exDe: "Im ___ sitzt Pinko.", exEn: "Pinko sits in the ___.", article: "der", plural: "Parks", wordType: "noun" },
-  { id: "w-malen", de: "malen", en: "to paint", exDe: "Er ___.", exEn: "He is painting.", wordType: "verb" },
+  { id: "w-malen", de: "malen", en: "to paint", exDe: "Er malt ein Bild.", exEn: "He ___ a picture.", wordType: "verb" },
   { id: "w-danke", de: "Danke", en: "Thank you", exDe: "___!", exEn: "___!", wordType: "phrase" },
   { id: "w-bitte", de: "Bitte", en: "Please / You're welcome", exDe: "___!", exEn: "___!", wordType: "phrase" },
   { id: "w-guten-morgen", de: "Guten Morgen", en: "Good morning", exDe: "___!", exEn: "___!", wordType: "phrase" },
@@ -68,14 +68,14 @@ const ALL_VOCABULARY: Word[] = [
   { id: "w-brot", de: "Brot", en: "bread", exDe: "Ich möchte ein ___.", exEn: "I would like some ___.", article: "das", plural: "Brote", wordType: "noun" },
   { id: "w-moechte", de: "möchte", en: "would like", exDe: "Ich ___ ein Brot.", exEn: "I ___ some bread.", wordType: "verb" },
   { id: "w-bitte-schoen", de: "Bitte schön", en: "Here you are", exDe: "___!", exEn: "___!", wordType: "phrase" },
-  { id: "w-euro", de: "Euro", en: "euro", exDe: "Das kostet drei ___.", exEn: "That costs three ___.", article: "der", plural: "Euro/Euros", wordType: "noun" },
+  { id: "w-euro", de: "Euro", en: "euro", exDe: "Das kostet drei ___.", exEn: "That costs three ___.", article: "der", plural: "Euro", wordType: "noun" },
   
   // Episode 2 - Der verlorene Schlüssel
   { id: "w-schluessel", de: "Schlüssel", en: "key", exDe: "Der verlorene ___.", exEn: "The lost ___.", article: "der", plural: "Schlüssel", wordType: "noun" },
-  { id: "w-haus", de: "Haus", en: "house", exDe: "Ich bin zu ___.", exEn: "I am at ___.", article: "das", plural: "Häuser", wordType: "noun" },
+  { id: "w-haus", de: "Haus", en: "house", exDe: "Ich bin zu ___  gegangen.", exEn: "I went to ___ .", article: "das", plural: "Häuser", wordType: "noun" },
   { id: "w-suchen", de: "suchen", en: "to search", exDe: "Ich ___ den Schlüssel.", exEn: "I ___ for the key.", wordType: "verb" },
   { id: "w-finden", de: "finden", en: "to find", exDe: "Ich kann es nicht ___.", exEn: "I can't ___ it.", wordType: "verb" },
-  { id: "w-hilfe", de: "Hilfe", en: "help", exDe: "Ich brauche ___!", exEn: "I need ___!", article: "die", plural: "-", wordType: "noun" },
+  { id: "w-hilfe", de: "Hilfe", en: "help", exDe: "Ich brauche ___!", exEn: "I need ___!", article: "die", plural: "Hilfen", wordType: "noun" },
   
   // Episode 3 - Der Brief
   { id: "w-brief", de: "Brief", en: "letter", exDe: "Ein ___ für dich.", exEn: "A ___ for you.", article: "der", plural: "Briefe", wordType: "noun" },
@@ -91,7 +91,7 @@ const ALL_VOCABULARY: Word[] = [
   
   // Episode 5 - Das Geheimnis
   { id: "w-geheimnis", de: "Geheimnis", en: "secret", exDe: "Das ___!", exEn: "The ___!", article: "das", plural: "Geheimnisse", wordType: "noun" },
-  { id: "w-verstecken", de: "verstecken", en: "to hide", exDe: "Wo ist es ___?", exEn: "Where is it hidden?", wordType: "verb" },
+  { id: "w-verstecken", de: "verstecken", en: "to hide", exDe: "Wo ist es ___?", exEn: "Where is it ___?", wordType: "verb" },
   { id: "w-freund", de: "Freund", en: "friend", exDe: "Mein bester ___.", exEn: "My best ___.", article: "der", plural: "Freunde", wordType: "noun" },
   { id: "w-zusammen", de: "zusammen", en: "together", exDe: "Wir sind ___.", exEn: "We are ___.", wordType: "other" },
 ];
@@ -208,7 +208,7 @@ function makeCards(words: Word[]): Card[] {
       dir: "en-de",
       prompt: w.en,        // Show English word
       answer: w.de,        // Type German word
-      cloze: cloze(w.exEn, w.en),  // English example sentence
+      cloze: cloze(w.exDe, w.de),  // ALWAYS use German example sentence
       next: now, interval: 0, ease: 2.5, reps: 0, lapses: 0, new: true,
       article: w.article,
       plural: w.plural,
@@ -380,33 +380,16 @@ export default function FlashcardsPage() {
     setQueue(buildQueue(loadedCards));
     setIsLoading(false);
   }, []);
-  
-  const current = queue[idx];
-
-  // Show loading state while cards are being loaded
-  if (isLoading) {
-    return (
-      <Shell>
-        <Header onBack={() => router.push('/')} />
-        <main role="main" aria-label={t.flashcardStudy.studySession}>
-          <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#58CC02] mx-auto mb-4"></div>
-              <p className="text-gray-600">{t.common.loading}</p>
-            </div>
-          </div>
-        </main>
-      </Shell>
-    );
-  }
 
   // recompute queue if deck changed
   useEffect(() => { 
-    saveCards(cards); 
-    setQueue(buildQueue(cards)); 
-    setIdx(0); 
+    if (cards.length > 0) {
+      saveCards(cards); 
+      setQueue(buildQueue(cards)); 
+      setIdx(0);
+    }
   }, [cards.length]);
-
+  
   const stats = useMemo(() => {
     const now = Date.now();
     const due = cards.filter(c => !c.new && c.next <= now).length;
@@ -415,22 +398,42 @@ export default function FlashcardsPage() {
     return { due, newCount, learned, total: cards.length };
   }, [cards]);
 
+  const current = queue[idx];
+  
+  // Calculate correctness early for use in useEffect
+  const correct = current && input ? fuzzyMatch(input, current.answer) : false;
+
+  // Auto-grade when answer is revealed based on correctness
+  useEffect(() => {
+    if (!reveal || !current) return;
+
+    // Auto-grade after 1 second
+    const timer = setTimeout(() => {
+      // Determine quality based on correctness
+      const quality: 0 | 3 = correct ? 3 : 0;
+      grade(quality);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reveal, current, correct]);
+
+  // Define grade function
   function grade(quality: 0 | 2 | 3 | 4) {
     if (!current) return;
     
-    // Use the new FlashcardSystem method
-    const updated = FlashcardSystem.updateCardAfterReview(current.id, quality);
-    if (updated) {
-      const newDeck = cards.map(c => (c.id === updated.german ? { ...c, ...updated } : c));
-      setCards(newDeck);
-      
-      // Track session stats
-      setSessionStats(prev => ({
-        studied: [...prev.studied, current], // Keep using the original Card type
-        correct: quality >= 2 ? prev.correct + 1 : prev.correct,
-        incorrect: quality < 2 ? prev.incorrect + 1 : prev.incorrect
-      }));
-    }
+    // Update the card using the schedule function to set next review time
+    const updated = schedule(current, quality);
+    const newDeck = cards.map(c => (c.id === updated.id ? updated : c));
+    setCards(newDeck);
+    saveCards(newDeck);
+    
+    // Track session stats - ALWAYS track, regardless of update success
+    setSessionStats(prev => ({
+      studied: [...prev.studied, current],
+      correct: quality >= 2 ? prev.correct + 1 : prev.correct,
+      incorrect: quality < 2 ? prev.incorrect + 1 : prev.incorrect
+    }));
     
     // Award XP and update quests
     if (quality >= 2) {
@@ -457,24 +460,6 @@ export default function FlashcardsPage() {
     if (!current) return;
     setReveal(true);
   }
-
-  // Keyboard shortcut: Enter = Good when answer revealed (but not from input)
-  useEffect(() => {
-    if (!reveal) return; // Only add listener when answer is revealed
-
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
-        // Only trigger if not focused on input field
-        if (document.activeElement?.tagName !== 'INPUT') {
-          e.preventDefault();
-          grade(3);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [reveal, current]);
 
   // Show summary after completing session
   if (showSummary) {
@@ -516,8 +501,6 @@ export default function FlashcardsPage() {
       </Shell>
     );
   }
-
-  const correct = fuzzyMatch(input, current.answer);
 
   const progress = queue.length > 0 ? Math.round(((idx + 1) / queue.length) * 100) : 0;
 
@@ -683,11 +666,14 @@ export default function FlashcardsPage() {
                   ? t.flashcardStudy.perfect 
                   : t.flashcardStudy.keepPracticing}
               </div>
+              <div className="mt-3 text-xs opacity-70 italic">
+                {correct ? "✓ Correct! Auto-advancing in 1 second..." : "✗ Incorrect. Auto-advancing in 1 second..."}
+              </div>
             </motion.div>
           )}
 
-           {/* Grade buttons */}
-           {reveal && (
+           {/* Grade buttons - hidden with auto-grading enabled */}
+           {false && reveal && (
              <motion.div 
                initial={{ opacity: 0, y: 10 }}
                animate={{ opacity: 1, y: 0 }}

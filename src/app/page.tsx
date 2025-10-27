@@ -339,6 +339,9 @@ export default function Home() {
                 onNavigate={(page) => {
                   setCurrentState(`profile-${page}` as AppState);
                 }}
+                onNavigateToGrammar={() => {
+                  setCurrentState('grammar-library');
+                }}
               />
             ) : (
               <button 
@@ -518,41 +521,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* World cards section */}
-      <div className="relative z-10 bg-[#FFF9F2]/90 backdrop-blur-sm py-12 px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-          {/* Forest */}
-          <motion.div
-            className="world-card forest"
-            onClick={() => {
-              // Navigate to new flashcard system
-              window.location.href = '/flashcards';
-            }}
-            whileHover={{ y: -5 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="world-card-content">
-              <h3 className="world-card-title">Forest</h3>
-              <p className="world-card-subtitle">My Flashcards<br />Review</p>
-            </div>
-          </motion.div>
-
-          {/* Library */}
-          <motion.div
-            className="world-card library"
-            onClick={() => {
-              setCurrentState('grammar-library');
-            }}
-            whileHover={{ y: -5 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="world-card-content">
-              <h3 className="world-card-title">Library</h3>
-              <p className="world-card-subtitle">Grammar<br />Insights</p>
-            </div>
-          </motion.div>
-        </div>
-      </div>
 
       {/* Additional Homepage Design Section */}
       <div className="relative z-10 bg-gradient-to-b from-[#F8F5F0] via-[#F3ECF9] to-[#E8DDF2] py-20 px-6">

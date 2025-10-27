@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User as UserIcon, LogOut, Settings, Award, BookOpen, TrendingUp, Zap } from 'lucide-react';
+import { User as UserIcon, LogOut, Settings, Award, BookOpen, TrendingUp, Zap, Forest, GraduationCap } from 'lucide-react';
 import { signOut } from '@/lib/auth';
 import { User } from 'firebase/auth';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -11,9 +11,10 @@ type UserMenuProps = {
   user: User;
   onSignOut?: () => void;
   onNavigate?: (page: 'progress' | 'achievements' | 'flashcards' | 'settings' | 'level') => void;
+  onNavigateToGrammar?: () => void;
 };
 
-export function UserMenu({ user, onSignOut, onNavigate }: UserMenuProps) {
+export function UserMenu({ user, onSignOut, onNavigate, onNavigateToGrammar }: UserMenuProps) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -124,6 +125,22 @@ export function UserMenu({ user, onSignOut, onNavigate }: UserMenuProps) {
                   onClick={() => {
                     setIsOpen(false);
                     onNavigate?.('flashcards');
+                  }}
+                />
+                <MenuItem
+                  icon={<Forest className="h-5 w-5" />}
+                  text="Flashcards"
+                  onClick={() => {
+                    setIsOpen(false);
+                    window.location.href = '/flashcards';
+                  }}
+                />
+                <MenuItem
+                  icon={<GraduationCap className="h-5 w-5" />}
+                  text="Grammar Library"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onNavigateToGrammar?.();
                   }}
                 />
                 <MenuItem

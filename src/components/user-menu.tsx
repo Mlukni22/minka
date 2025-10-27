@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User as UserIcon, LogOut, Settings, Award, BookOpen, TrendingUp, Zap, Forest, GraduationCap } from 'lucide-react';
+import { User as UserIcon, LogOut, Settings, Award, BookOpen, TrendingUp, Zap, Trees, GraduationCap } from 'lucide-react';
 import { signOut } from '@/lib/auth';
 import { User } from 'firebase/auth';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -128,7 +128,7 @@ export function UserMenu({ user, onSignOut, onNavigate, onNavigateToGrammar }: U
                   }}
                 />
                 <MenuItem
-                  icon={<Forest className="h-5 w-5" />}
+                  icon={<Trees className="h-5 w-5" />}
                   text="Flashcards"
                   onClick={() => {
                     setIsOpen(false);

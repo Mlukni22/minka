@@ -251,7 +251,7 @@ export class ProgressionSystem {
         try {
           const parsed = JSON.parse(saved);
           // Convert date strings back to Date objects
-          Object.values(parsed.episodeProgress).forEach((ep: EpisodeProgress) => {
+          Object.values(parsed.episodeProgress).forEach((ep: any) => {
             if (ep.completedAt) {
               ep.completedAt = new Date(ep.completedAt);
             }

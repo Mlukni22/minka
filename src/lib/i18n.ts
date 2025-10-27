@@ -199,7 +199,6 @@ export interface Translations {
     nextScene: string;
     nextExercise: string;
     exercises: string;
-    next: string;
     completeStory: string;
     nextChapter: string;
     wordAddedToFlashcards: string;
@@ -461,7 +460,6 @@ const en: Translations = {
     nextScene: 'Next Scene',
     nextExercise: 'Next Exercise',
     exercises: 'Exercises',
-    next: 'Next',
     completeStory: 'Complete Story',
     nextChapter: 'Next Chapter',
     wordAddedToFlashcards: 'Word added to flashcards',
@@ -711,7 +709,6 @@ const bg: Translations = {
     nextScene: 'Следваща сцена',
     nextExercise: 'Следващо упражнение',
     exercises: 'Упражнения',
-    next: 'Следваща',
     completeStory: 'Завърши историята',
     nextChapter: 'Следваща глава',
     wordAddedToFlashcards: 'Дума добавена към флашкартите',

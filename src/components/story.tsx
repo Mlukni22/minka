@@ -154,7 +154,7 @@ export function StoryReader({ chapter, onComplete, onNext }: StoryReaderProps) {
         <Button
           variant="outline"
           onClick={handlePrevious}
-          disabled={currentContentIndex === 0}
+          disabled={true}
         >
           ← Previous
         </Button>
@@ -163,7 +163,7 @@ export function StoryReader({ chapter, onComplete, onNext }: StoryReaderProps) {
           onClick={handleNext}
           className="px-8"
         >
-          {isLastContent ? 'Complete Chapter' : 'Next →'}
+          Complete Chapter
         </Button>
       </div>
     </div>

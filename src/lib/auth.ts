@@ -24,6 +24,9 @@ export async function signUp(
   password: string,
   displayName: string
 ): Promise<UserCredential> {
+  if (!auth) {
+    throw new Error('Firebase auth is not initialized');
+  }
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     
@@ -47,6 +50,9 @@ export async function signUp(
  * Sign in with email and password
  */
 export async function signIn(email: string, password: string): Promise<UserCredential> {
+  if (!auth) {
+    throw new Error('Firebase auth is not initialized');
+  }
   try {
     return await signInWithEmailAndPassword(auth, email, password);
   } catch (error: unknown) {
@@ -60,6 +66,9 @@ export async function signIn(email: string, password: string): Promise<UserCrede
  * Sign in with Google
  */
 export async function signInWithGoogle(): Promise<UserCredential> {
+  if (!auth || !db) {
+    throw new Error('Firebase is not initialized');
+  }
   try {
     const result = await signInWithPopup(auth, googleProvider);
     
@@ -81,6 +90,9 @@ export async function signInWithGoogle(): Promise<UserCredential> {
  * Sign out
  */
 export async function signOut(): Promise<void> {
+  if (!auth) {
+    throw new Error('Firebase auth is not initialized');
+  }
   try {
     await firebaseSignOut(auth);
   } catch (error: unknown) {
@@ -93,6 +105,9 @@ export async function signOut(): Promise<void> {
  * Send password reset email
  */
 export async function resetPassword(email: string): Promise<void> {
+  if (!auth) {
+    throw new Error('Firebase auth is not initialized');
+  }
   try {
     await sendPasswordResetEmail(auth, email);
   } catch (error: unknown) {
@@ -106,7 +121,7 @@ export async function resetPassword(email: string): Promise<void> {
  * Create user document in Firestore
  */
 async function createUserDocument(user: User): Promise<void> {
-  if (!user) return;
+  if (!user || !db) return;
   
   const userRef = doc(db, 'users', user.uid);
   const userDoc = await getDoc(userRef);
@@ -141,13 +156,16 @@ async function createUserDocument(user: User): Promise<void> {
  * Get current user
  */
 export function getCurrentUser(): User | null {
-  return auth.currentUser;
+  return auth ? auth.currentUser : null;
 }
 
 /**
  * Listen to auth state changes
  */
 export function onAuthChange(callback: (user: User | null) => void): () => void {
+  if (!auth) {
+    return () => {}; // Return no-op unsubscribe function
+  }
   return onAuthStateChanged(auth, callback);
 }
 

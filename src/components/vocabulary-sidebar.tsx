@@ -161,7 +161,7 @@ export function VocabularySidebar({
                         {/* Audio Player */}
                         {word.audio && (
                           <div className="mb-3">
-                            <AudioPlayer src={word.audio} />
+                            <AudioPlayer text={word.german} audioUrl={word.audio} showText={false} size="sm" />
                           </div>
                         )}
 

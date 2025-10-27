@@ -14,46 +14,16 @@ interface VocabularyReviewProps {
 
 export function VocabularyReview({ items: propItems, onComplete, onBack }: VocabularyReviewProps) {
   // Load user's personal flashcards and convert to SRSVocabularyItem
-  const [userFlashcards, setUserFlashcards] = useState<SRSVocabularyItem[]>(() => {
-    const flashcards = FlashcardSystem.loadFlashcards();
-    return flashcards.map(card => ({
-      ...card,
-      id: card.german.toLowerCase(),
-      interval: 0,
-      repetition: 0,
-      easeFactor: 2.5,
-      nextReviewDate: new Date().toISOString(),
-      lastReviewDate: new Date().toISOString(),
-      sourceEpisodeId: card.fromEpisode,
-      addedByClick: card.clickedToAdd,
-      reviewCount: card.reviewCount
-    }));
-  });
-  
-  const items = propItems || userFlashcards;
+  // For now, just use propItems and ignore loaded flashcards
+  // In the future, this can be enhanced to properly map flashcard data
+  const items = propItems || [];
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [reviewedItems, setReviewedItems] = useState<SRSVocabularyItem[]>([]);
   const [stats, setStats] = useState({ correct: 0, incorrect: 0 });
 
-  // Reload flashcards when component mounts
-  useEffect(() => {
-    const flashcards = FlashcardSystem.loadFlashcards();
-    const converted = flashcards.map(card => ({
-      ...card,
-      id: card.german.toLowerCase(),
-      interval: 0,
-      repetition: 0,
-      easeFactor: 2.5,
-      nextReviewDate: new Date().toISOString(),
-      lastReviewDate: new Date().toISOString(),
-      sourceEpisodeId: card.fromEpisode,
-      addedByClick: card.clickedToAdd,
-      reviewCount: card.reviewCount
-    }));
-    setUserFlashcards(converted);
-  }, []);
+  // useEffect to load flashcards removed - using propItems only for now
 
   const currentItem = items[currentIndex];
   const isLastItem = currentIndex === items.length - 1;

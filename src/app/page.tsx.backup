@@ -1,20 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, BookOpen, Clock, Sparkles, Book, Headphones, CheckCircle, Volume2 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { StoryEngine } from '@/lib/story-engine';
-import { SRSAlgorithm, SRSVocabularyItem } from '@/lib/srs';
-import { ProgressionSystem, UserProgressionState } from '@/lib/progression';
-import { Story, StoryChapter, UserProgress } from '@/types';
-import { Layout, Card, Button } from '@/components/layout';
-import { FadeIn } from '@/components/animations';
-import { ProgressOverview, StreakVisualization, VocabularyProgress, DailyGoal } from '@/components/progress';
+import { SRSVocabularyItem } from '@/lib/srs';
+import { ProgressionSystem } from '@/lib/progression';
+import { Story } from '@/types';
+import { Layout } from '@/components/layout';
 import { EpisodeSelector } from '@/components/episode-selector';
-import { StoryReader } from '@/components/story-reader';
-import { VocabularyReview } from '@/components/vocabulary-review';
-import { GrammarLesson } from '@/components/grammar-lesson';
 import { getGrammarLessonByEpisode } from '@/data/grammar-lessons';
 import { FlashcardSystem } from '@/lib/flashcard-system';
 import { Dashboard } from '@/components/dashboard';
@@ -31,14 +25,8 @@ import { DailyQuestSystem, QuestType, DailyQuest } from '@/lib/daily-quests';
 import { XPNotification, LevelUpNotification } from '@/components/level-display';
 import { QuestCompletionNotification } from '@/components/daily-quests';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { LanguageSwitcher } from '@/components/language-switcher';
-import { StreakWidget } from '@/components/streak-widget';
-import { UserMenu } from '@/components/user-menu';
-import { SectionErrorBoundary } from '@/components/section-error-boundary';
 import GameRoadmap from '@/components/game-roadmap';
 import HomeView from '@/components/HomeView';
-import { onAuthChange } from '@/lib/auth';
-import { getUserProgress, getUserProgressionState, saveUserProgressionState, syncLocalStorageToFirestore } from '@/lib/user-data';
 import { useUserState } from '@/hooks/useUserState';
 import { useAppState, AppState } from '@/hooks/useAppState';
 import ProgressView from '@/views/ProgressView';
@@ -46,6 +34,8 @@ import StoryView from '@/views/StoryView';
 import VocabularyView from '@/views/VocabularyView';
 import GrammarView from '@/views/GrammarView';
 import GrammarLibraryView from '@/views/GrammarLibraryView';
+
+type AppState = 'home' | 'story' | 'vocabulary' | 'progress' | 'grammar' | 'grammar-library' | 'episodes' | 'reader' | 'dashboard' | 'roadmap' | 'profile-progress' | 'profile-achievements' | 'profile-flashcards' | 'profile-settings' | 'profile-level' | 'about';
 
 export default function Home() {
   const { t } = useLanguage();

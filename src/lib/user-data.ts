@@ -11,16 +11,23 @@ import {
 } from 'firebase/firestore';
 import { User } from 'firebase/auth';
 import { db } from './firebase';
+import { Firestore } from 'firebase/firestore';
 import { UserProgress } from '@/types';
 import { UserProgressionState } from './progression';
 import { SRSVocabularyItem } from './srs';
+
+// Helper to ensure db is defined
+const getDb = (): Firestore => {
+  if (!db) throw new Error('Firestore not initialized');
+  return db;
+};
 
 /**
  * Get user progress from Firestore
  */
 export async function getUserProgress(userId: string): Promise<UserProgress | null> {
   try {
-    const userRef = doc(db, 'users', userId);
+    const userRef = doc(getDb(), 'users', userId);
     const userDoc = await getDoc(userRef);
     
     if (userDoc.exists()) {
@@ -51,7 +58,7 @@ export async function updateUserProgress(
   progress: Partial<UserProgress>
 ): Promise<void> {
   try {
-    const userRef = doc(db, 'users', userId);
+    const userRef = doc(getDb(), 'users', userId);
     await updateDoc(userRef, {
       ...progress,
       lastActiveDate: serverTimestamp()
@@ -69,7 +76,7 @@ export async function getUserProgressionState(
   userId: string
 ): Promise<UserProgressionState | null> {
   try {
-    const progressionRef = doc(db, 'progressions', userId);
+    const progressionRef = doc(getDb(), 'progressions', userId);
     const progressionDoc = await getDoc(progressionRef);
     
     if (progressionDoc.exists()) {
@@ -91,7 +98,7 @@ export async function saveUserProgressionState(
   state: UserProgressionState
 ): Promise<void> {
   try {
-    const progressionRef = doc(db, 'progressions', userId);
+    const progressionRef = doc(getDb(), 'progressions', userId);
     await setDoc(progressionRef, {
       ...state,
       lastUpdated: serverTimestamp()
@@ -107,7 +114,7 @@ export async function saveUserProgressionState(
  */
 export async function getUserFlashcards(userId: string): Promise<SRSVocabularyItem[]> {
   try {
-    const flashcardsRef = collection(db, 'users', userId, 'flashcards');
+    const flashcardsRef = collection(getDb(), 'users', userId, 'flashcards');
     const snapshot = await getDocs(flashcardsRef);
     
     const flashcards: SRSVocabularyItem[] = [];
@@ -137,7 +144,7 @@ export async function saveUserFlashcards(
     const batch: Promise<void>[] = [];
     
     flashcards.forEach((card) => {
-      const cardRef = doc(db, 'users', userId, 'flashcards', card.id);
+      const cardRef = doc(getDb(), 'users', userId, 'flashcards', card.id);
       batch.push(setDoc(cardRef, card, { merge: true }));
     });
     
@@ -168,7 +175,7 @@ export async function updateUserProfile(
   }
 ): Promise<void> {
   try {
-    const userRef = doc(db, 'users', userId);
+    const userRef = doc(getDb(), 'users', userId);
     await updateDoc(userRef, {
       ...updates,
       lastUpdated: serverTimestamp()
@@ -184,12 +191,12 @@ export async function updateUserProfile(
  */
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
-    const usersRef = collection(db, 'users');
+    const usersRef = collection(getDb(), 'users');
     const q = query(usersRef, where('email', '==', email));
     const snapshot = await getDocs(q);
     
     if (!snapshot.empty) {
-      return snapshot.docs[0].data();
+      return snapshot.docs[0].data() as User;
     }
     
     return null;

@@ -15,9 +15,9 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
+let db: Firestore | undefined;
 
 if (typeof window !== 'undefined') {
   // Only initialize on client side
@@ -31,6 +31,9 @@ if (typeof window !== 'undefined') {
   db = getFirestore(app);
 }
 
+// Export with proper types - will be undefined on server
+export const getAuthInstance = () => auth;
+export const getDbInstance = () => db;
+
 export { auth, db };
-export default app;
 

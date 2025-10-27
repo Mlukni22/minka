@@ -38,7 +38,7 @@ export function vocabularyToFlashcardWords(vocabulary: VocabularyItem[]): Flashc
     id: `w-${item.german.toLowerCase().replace(/\s+/g, '-')}`,
     de: item.german,
     en: item.english,
-    exDe: item.example || `___ ist ein Wort.`, // Fallback example
+    exDe: item.german || `___ ist ein Wort.`, // Fallback example
     exEn: `___ is a word.` // Fallback example
   }));
 }

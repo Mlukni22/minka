@@ -230,7 +230,7 @@ function QuickStats({ progressionState }: { progressionState: any }) {
 function WorldCards({ onNavigate }: any) {
   return (
     <div className="relative z-10 bg-[#FFF9F2]/90 backdrop-blur-sm py-12 px-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
         <motion.div
           className="world-card forest"
           onClick={() => { window.location.href = '/flashcards'; }}
@@ -240,18 +240,6 @@ function WorldCards({ onNavigate }: any) {
           <div className="world-card-content">
             <h3 className="world-card-title">Forest</h3>
             <p className="world-card-subtitle">My Flashcards<br />Review</p>
-          </div>
-        </motion.div>
-
-        <motion.div
-          className="world-card village"
-          onClick={() => onNavigate('episodes')}
-          whileHover={{ y: -5 }}
-          transition={{ duration: 0.2 }}
-        >
-          <div className="world-card-content">
-            <h3 className="world-card-title">Village</h3>
-            <p className="world-card-subtitle">Everyday<br />Conversations</p>
           </div>
         </motion.div>
 

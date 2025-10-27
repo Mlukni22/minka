@@ -320,7 +320,6 @@ export default function Home() {
           </div>
           <nav className="hidden gap-8 text-[#6D5B95] md:flex" role="navigation" aria-label="Main navigation">
             <a href="#features" className="hover:opacity-80">{t.nav.features}</a>
-            <button onClick={() => setCurrentState('episodes')} className="hover:opacity-80">{t.nav.stories}</button>
             <button onClick={() => setCurrentState('roadmap')} className="hover:opacity-80">{t.nav.roadmap}</button>
             <button onClick={() => setCurrentState('about')} className="hover:opacity-80">{t.nav.about}</button>
           </nav>
@@ -521,7 +520,7 @@ export default function Home() {
 
       {/* World cards section */}
       <div className="relative z-10 bg-[#FFF9F2]/90 backdrop-blur-sm py-12 px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
           {/* Forest */}
           <motion.div
             className="world-card forest"
@@ -535,19 +534,6 @@ export default function Home() {
             <div className="world-card-content">
               <h3 className="world-card-title">Forest</h3>
               <p className="world-card-subtitle">My Flashcards<br />Review</p>
-            </div>
-          </motion.div>
-
-          {/* Village */}
-          <motion.div
-            className="world-card village"
-            onClick={() => setCurrentState('episodes')}
-            whileHover={{ y: -5 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="world-card-content">
-              <h3 className="world-card-title">Village</h3>
-              <p className="world-card-subtitle">Everyday<br />Conversations</p>
             </div>
           </motion.div>
 

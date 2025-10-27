@@ -111,7 +111,6 @@ function TopSection({
         </div>
         <nav className="hidden gap-8 text-[#6D5B95] md:flex">
           <a href="#features" className="hover:opacity-80">{t.nav.features}</a>
-          <button onClick={() => onNavigate('episodes')} className="hover:opacity-80">{t.nav.stories}</button>
           <button onClick={() => onNavigate('roadmap')} className="hover:opacity-80">{t.nav.roadmap}</button>
           <button onClick={() => onNavigate('about')} className="hover:opacity-80">{t.nav.about}</button>
         </nav>

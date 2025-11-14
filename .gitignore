@@ -47,3 +47,6 @@ firebase-debug.*.log
 # Temporary files
 *.tmp
 *.temp
+
+# Waitlist data (contains user emails - keep private)
+data/waitlist.json

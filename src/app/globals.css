@@ -20,10 +20,13 @@
 }
 
 body {
-  background: var(--background);
+  background: #bbdd6d;
   color: var(--foreground);
   font-family: var(--font-poppins), var(--font-nunito), var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  position: relative;
+  min-height: 100vh;
 }
+
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {

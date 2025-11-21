@@ -1,10 +1,17 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 interface SendWaitlistConfirmationParams {
   to: string;
   email: string;
+}
+
+// Lazy-load Resend instance only when needed (to avoid build errors)
+function getResend() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not configured');
+  }
+  return new Resend(apiKey);
 }
 
 export async function sendWaitlistConfirmation({ to, email }: SendWaitlistConfirmationParams) {
@@ -33,6 +40,8 @@ export async function sendWaitlistConfirmation({ to, email }: SendWaitlistConfir
     console.log('[email] From:', fromEmail);
     console.log('[email] API Key present:', !!apiKey);
 
+    // Create Resend instance only when needed
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: fromEmail,
       to,

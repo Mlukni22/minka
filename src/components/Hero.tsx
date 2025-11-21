@@ -1,8 +1,7 @@
 ﻿'use client';
 
 import Image from 'next/image';
-import { useRef, useState, useTransition, FormEvent } from 'react';
-import { motion, Variants } from 'framer-motion';
+import { useState, useTransition, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { subscribe } from '@/app/actions/subscribe';
 
@@ -17,23 +16,7 @@ interface HeroProps {
   };
 }
 
-const ease = [0.22, 0.61, 0.36, 1] as const;
-
-const fadeIn: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  visible: ({ delay = 0 }: { delay?: number } = { delay: 0 }) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.7,
-      delay,
-      ease,
-    },
-  }),
-};
-
 export default function Hero({ content }: HeroProps) {
-  const ref = useRef<HTMLDivElement>(null);
   
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -71,45 +54,23 @@ export default function Hero({ content }: HeroProps) {
   };
 
   return (
-    <section ref={ref} className="relative overflow-hidden pb-[clamp(56px,8vw,96px)] pt-[clamp(88px,12vw,140px)]">
-      <div className="mx-auto flex max-w-6xl flex-col gap-14 px-6 py-12 md:flex-row md:items-center">
-        <div className="max-w-2xl space-y-6 text-center text-[#111111] md:max-w-xl md:text-left">
-          <motion.h1
-            variants={fadeIn}
-            initial="hidden"
-            animate="visible"
-            custom={{ delay: 0.1 }}
-            className="text-[clamp(3rem,6vw,4.5rem)] font-semibold"
-          >
+    <section className="relative overflow-hidden pb-[clamp(40px,6vw,96px)] pt-[clamp(60px,10vw,140px)]">
+      <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:gap-12 md:gap-14 px-4 sm:px-6 py-8 sm:py-12 md:flex-row md:items-center">
+        <div className="max-w-2xl space-y-5 sm:space-y-6 text-center text-[#111111] md:max-w-xl md:text-left w-full">
+          <h1 className="text-[clamp(2rem,7vw,4.5rem)] font-semibold leading-tight sm:leading-normal">
             {content.title}
-          </motion.h1>
-          <motion.p
-            variants={fadeIn}
-            initial="hidden"
-            animate="visible"
-            custom={{ delay: 0.2 }}
-            className="text-base leading-relaxed text-[#4C515A] md:text-lg"
-          >
+          </h1>
+          <p className="text-sm sm:text-base leading-relaxed text-[#4C515A] md:text-lg px-2 sm:px-0">
             {content.description}
-          </motion.p>
+          </p>
           {content.secondary && (
-            <motion.p
-              variants={fadeIn}
-              initial="hidden"
-              animate="visible"
-              custom={{ delay: 0.25 }}
-              className="text-base font-medium text-[#293033] md:text-lg"
-            >
+            <p className="text-sm sm:text-base leading-relaxed text-[#4C515A] md:text-lg px-2 sm:px-0">
               {content.secondary}
-            </motion.p>
+            </p>
           )}
-          <motion.form
-            variants={fadeIn}
-            initial="hidden"
-            animate="visible"
-            custom={{ delay: 0.35 }}
+          <form
             onSubmit={handleSubmit}
-            className="flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center md:justify-start"
+            className="flex w-full max-w-md mx-auto md:mx-0 flex-col gap-3 sm:flex-row sm:justify-center md:justify-start"
           >
             <label className="sr-only" htmlFor="hero-email">
               Email address
@@ -126,51 +87,39 @@ export default function Hero({ content }: HeroProps) {
                 }
               }}
               placeholder="Enter your email"
-              className="flex-1 rounded-full border border-[#0000001a] bg-white/90 px-6 py-3.5 text-sm text-[#111111] placeholder:text-[#6B7280] focus:border-[#111111] focus:outline-none focus:ring-2 focus:ring-[#111111]/30 transition-colors"
+              className="flex-1 rounded-full border border-[#0000001a] bg-white/90 px-5 sm:px-6 py-3 sm:py-3.5 text-sm sm:text-base text-[#111111] placeholder:text-[#6B7280] focus:border-[#111111] focus:outline-none focus:ring-2 focus:ring-[#111111]/30 transition-colors min-h-[44px]"
               required
               disabled={isPending}
               aria-invalid={status === 'error'}
             />
-            <Button type="submit" disabled={isPending} size="lg" variant="accent" className="whitespace-nowrap">
+            <Button type="submit" disabled={isPending} size="lg" variant="accent" className="whitespace-nowrap min-h-[44px]">
               {isPending ? 'Joining...' : 'Join Waitlist'}
             </Button>
-          </motion.form>
+          </form>
           
           {message && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`text-sm text-center md:text-left ${
+            <div
+              className={`text-xs sm:text-sm text-center md:text-left px-2 sm:px-0 ${
                 status === 'error' ? 'text-[#dc2626]' : 'text-[#16a34a]'
               }`}
               role="alert"
               aria-live="polite"
             >
               {message}
-            </motion.div>
+            </div>
           )}
           {content.banner && (
-            <motion.div
-              variants={fadeIn}
-              initial="hidden"
-              animate="visible"
-              custom={{ delay: 0.4 }}
-              className="flex justify-center sm:justify-start"
-            >
-              <div className="rounded-full border border-[#F7D4D9] bg-[#F7D4D9]/40 px-5 py-2 text-sm text-[#7A4252]">
-                <span className="font-semibold">{content.banner.title}</span>
-                <span className="ml-2 opacity-80">• {content.banner.detail}</span>
+            <div className="flex justify-center sm:justify-start px-2 sm:px-0 mt-4 sm:mt-6">
+              <div className="rounded-full border-2 border-[#8C6BFF] bg-gradient-to-r from-[#8C6BFF] to-[#7a59ef] px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base text-white shadow-lg">
+                <span className="font-bold text-base sm:text-lg">🎉 {content.banner.title} 🎉</span>
+                <span className="ml-2 opacity-90 hidden sm:inline">• {content.banner.detail}</span>
               </div>
-            </motion.div>
+            </div>
           )}
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0, transition: { duration: 0.7, delay: 0.3, ease } }}
-          className="relative w-full max-w-xl"
-        >
-          <div className="overflow-hidden rounded-3xl border border-[#0000000D] bg-white/80 shadow-[0_24px_48px_rgba(17,17,17,0.08)] ring-1 ring-[#0000000D] backdrop-blur">
+        <div className="relative w-full max-w-xl mx-auto md:mx-0 mt-4 md:mt-0">
+          <div className="overflow-hidden rounded-2xl sm:rounded-3xl border border-[#0000000D] bg-white/80 shadow-[0_16px_32px_rgba(17,17,17,0.08)] sm:shadow-[0_24px_48px_rgba(17,17,17,0.08)] ring-1 ring-[#0000000D] backdrop-blur">
             <Image
               src="/images/hero-friends.png"
               alt="Minka the cat studying with forest friends in the village"
@@ -178,9 +127,10 @@ export default function Hero({ content }: HeroProps) {
               height={720}
               className="h-full w-full object-cover"
               priority
+              sizes="(max-width: 768px) 100vw, 50vw"
             />
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

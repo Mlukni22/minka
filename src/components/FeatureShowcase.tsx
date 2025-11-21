@@ -1,7 +1,6 @@
 'use client';
 
 import Image from 'next/image';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
 interface FeatureItem {
@@ -21,33 +20,23 @@ interface FeatureShowcaseProps {
 
 export default function FeatureShowcase({ content }: FeatureShowcaseProps) {
   return (
-    <section className="pt-[clamp(32px,5vw,56px)] pb-[clamp(56px,8vw,96px)] bg-[#fff09b]" id="fun-showcase">
-      <div className="mx-auto max-w-6xl px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 32 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.6 }}
-          className="mx-auto max-w-3xl text-center"
-        >
-          <h2 className="text-[clamp(2.5rem,5vw,3.75rem)] font-semibold text-[#111111]">
+    <section className="pt-[clamp(32px,5vw,56px)] pb-[clamp(40px,6vw,96px)] bg-[#fff09b]" id="fun-showcase">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="text-[clamp(2rem,6vw,3.75rem)] font-semibold text-[#111111] leading-tight sm:leading-normal px-2 sm:px-0">
             {content.title}
           </h2>
-          <p className="mt-4 text-base text-[#4C515A]">{content.description}</p>
-        </motion.div>
+          <p className="mt-3 sm:mt-4 text-sm sm:text-base text-[#4C515A] px-2 sm:px-0">{content.description}</p>
+        </div>
 
-        <div className="mt-16 grid gap-10 md:grid-cols-3">
-            {content.items.map((item, index) => (
-              <motion.div
+        <div className="mt-10 sm:mt-16 grid gap-8 sm:gap-10 md:grid-cols-3">
+            {content.items.map((item) => (
+              <div
                 key={item.title}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="flex h-full flex-col items-center gap-5 text-center"
+                className="flex h-full flex-col items-center gap-4 sm:gap-5 text-center"
               >
                 <div
-                  className="relative w-full overflow-hidden rounded-[2.5rem]"
+                  className="relative w-full overflow-hidden rounded-2xl sm:rounded-[2.5rem]"
                   style={{ aspectRatio: '5 / 3' }}
                 >
                   <Image
@@ -58,25 +47,19 @@ export default function FeatureShowcase({ content }: FeatureShowcaseProps) {
                     className="object-cover"
                   />
                 </div>
-                <div className="space-y-3">
-                  <h3 className="text-xl font-semibold text-[#111111]">{item.title}</h3>
-                  <p className="text-sm text-[#4C515A]">{item.description}</p>
+                <div className="space-y-2 sm:space-y-3 px-2">
+                  <h3 className="text-lg sm:text-xl font-semibold text-[#111111]">{item.title}</h3>
+                  <p className="text-xs sm:text-sm text-[#4C515A] leading-relaxed">{item.description}</p>
                 </div>
-              </motion.div>
+              </div>
             ))}
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="mt-14 flex justify-center"
-        >
-          <Button asChild size="lg" variant="accent">
+        <div className="mt-10 sm:mt-14 flex justify-center">
+          <Button asChild size="lg" variant="accent" className="min-h-[44px]">
             <a href={content.cta.href}>{content.cta.label}</a>
           </Button>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Poppins, Nunito } from "next/font/google";
+import { Geist, Geist_Mono, Poppins, Nunito, Inter } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -26,6 +26,12 @@ const nunito = Nunito({
   weight: ["400", "600", "700"],
 });
 
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "Minka - Learn German Through Stories",
   description: "Interactive, story-based language learning app that teaches German through emotional immersion and spaced repetition",
@@ -39,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} ${nunito.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} ${nunito.variable} ${inter.variable} antialiased`}
       >
         <ErrorBoundary>
           <LanguageProvider>

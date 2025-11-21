@@ -12,7 +12,7 @@ export const homeContent = {
     title: 'Learning that feels alive.',
     description:
       'With Minka, every word is part of a bigger tale — one that connects language to feeling, culture, and curiosity.',
-    secondary: "You don't just study; you live inside the story.",
+    secondary: "You don't just study, you live inside the story.",
     primaryCta: { label: 'Join the Waitlist', href: '/waitlist' },
     secondaryCta: { label: 'How it works', href: '#system' },
     banner: {

@@ -1,7 +1,6 @@
 'use client';
 
 import Image from 'next/image';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
 export default function ClassicHero() {
@@ -10,44 +9,38 @@ export default function ClassicHero() {
       className="relative overflow-hidden"
       aria-labelledby="classic-hero-title"
     >
-      <div className="mx-auto flex min-h-[min(640px,80vh)] max-w-5xl flex-col items-center justify-center gap-8 px-6 py-[clamp(64px,12vw,140px)] text-center text-[#111111]">
-        <motion.div
-          initial={{ opacity: 0, y: 32 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.6 }}
-          transition={{ duration: 0.6 }}
-          className="space-y-4"
-        >
-          <p className="text-xs uppercase tracking-[0.3em] text-[#6B7280]">Welcome to Minka</p>
-          <h1 id="classic-hero-title" className="text-[clamp(2rem,5vw,3.2rem)] font-semibold">
+      <div className="mx-auto flex min-h-[min(500px,75vh)] sm:min-h-[min(640px,80vh)] max-w-5xl flex-col items-center justify-center gap-6 sm:gap-8 px-4 sm:px-6 py-[clamp(40px,8vw,140px)] text-center text-[#111111]">
+        <div className="space-y-3 sm:space-y-4 w-full">
+          <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[#6B7280]">Welcome to Minka</p>
+          <h1 id="classic-hero-title" className="text-[clamp(1.75rem,6vw,3.2rem)] font-semibold leading-tight sm:leading-normal px-2">
             Learn German by following Minka&apos;s adventures.
           </h1>
-          <p className="mx-auto max-w-2xl text-base text-[#4C515A]">
+          <p className="mx-auto max-w-2xl text-sm sm:text-base text-[#4C515A] px-4 sm:px-0">
             Step into Minka&apos;s cozy world and learn naturally through short, heart-warming stories and spaced
             repetition.
           </p>
-          <div className="flex justify-center">
-            <Button asChild size="lg" variant="accent">
+          <div className="flex justify-center pt-2">
+            <Button asChild size="lg" variant="accent" className="min-h-[44px] px-6 sm:px-8">
               <a href="/waitlist">Join Waitlist</a>
             </Button>
           </div>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.5 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
+        </div>
+        <div
+          className="w-full flex justify-center"
+          style={{ marginLeft: '20px' }}
         >
-          <motion.div animate={{ y: [0, -18, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}>
+          <div className="w-[240px] sm:w-[300px] md:w-[360px] h-auto">
             <Image
               src="/images/minka-cat.png"
               alt="Illustration of Minka the cat sitting on a forest path"
               width={360}
               height={320}
               priority
+              className="w-full h-auto"
+              sizes="(max-width: 640px) 240px, (max-width: 768px) 300px, 360px"
             />
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </div>
     </section>
   );

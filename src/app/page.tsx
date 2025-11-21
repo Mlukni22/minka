@@ -22,7 +22,7 @@ export default function HomePage() {
             backgroundPosition: 'center top',
             backgroundAttachment: 'scroll',
             backgroundRepeat: 'no-repeat',
-            paddingTop: '80px',
+            paddingTop: 'clamp(60px,12vw,80px)',
             minHeight: '100vh',
             zIndex: 0,
           }}

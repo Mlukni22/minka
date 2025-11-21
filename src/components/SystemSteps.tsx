@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
 interface SystemStepsProps {
@@ -24,7 +23,7 @@ const slideshowImages = [
 
 export default function SystemSteps({ content }: SystemStepsProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const selectedSteps = content.steps.filter((step) => [1, 2, 3, 6].includes(step.number));
+  const selectedSteps = content.steps.filter((step) => [1, 2, 3, 4].includes(step.number));
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -35,104 +34,60 @@ export default function SystemSteps({ content }: SystemStepsProps) {
   }, []);
 
   return (
-    <section id="system" className="bg-[#fff09b] py-[clamp(56px,8vw,96px)]">
-      <div className="mx-auto max-w-6xl px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.6 }}
-          className="mx-auto max-w-3xl text-center space-y-4"
-        >
-          <h2 className="text-[clamp(2rem,4vw,2.8rem)] font-semibold text-[#111111]">{content.title}</h2>
-          <p className="text-base text-[#4C515A]">{content.intro}</p>
-          <p className="text-base text-[#4C515A]">{content.description}</p>
-        </motion.div>
+    <section id="system" className="bg-[#fff09b] py-[clamp(40px,6vw,96px)]">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-3xl text-center space-y-3 sm:space-y-4">
+          <h2 className="text-[clamp(1.75rem,5vw,2.8rem)] font-semibold text-[#111111] leading-tight sm:leading-normal px-2 sm:px-0">{content.title}</h2>
+          <p className="text-sm sm:text-base text-[#4C515A] px-2 sm:px-0">{content.intro}</p>
+          <p className="text-sm sm:text-base text-[#4C515A] px-2 sm:px-0">{content.description}</p>
+        </div>
 
-        <div className="mt-16 grid gap-10 lg:grid-cols-2 lg:items-start">
+        <div className="mt-10 sm:mt-16 grid gap-8 sm:gap-10 lg:grid-cols-2 lg:items-start">
           {/* Left side - Steps */}
-          <div className="space-y-8">
-            {selectedSteps.map((step, index) => (
-              <motion.div
+          <div className="space-y-6 sm:space-y-8 order-2 lg:order-1">
+            {selectedSteps.map((step) => (
+              <div
                 key={step.number}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{
-                  duration: 0.45,
-                  delay: index * 0.1,
-                }}
-                className="flex gap-4"
+                className="flex gap-3 sm:gap-4"
               >
-                <span className="mt-1 h-10 w-10 flex-shrink-0 rounded-full bg-[#EBD3FF] text-center text-lg font-semibold leading-[2.5rem] text-[#111111]">
+                <span className="mt-1 h-9 w-9 sm:h-10 sm:w-10 flex-shrink-0 rounded-full bg-[#8C6BFF] text-center text-base sm:text-lg font-semibold leading-[2.25rem] sm:leading-[2.5rem] text-white">
                   {step.number}
                 </span>
-                <div>
-                  <h3 className="text-lg font-semibold text-[#111111]">{step.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[#4C515A]">{step.description}</p>
+                <div className="flex-1">
+                  <h3 className="text-base sm:text-lg font-semibold text-[#111111]">{step.title}</h3>
+                  <p className="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-[#4C515A]">{step.description}</p>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
 
           {/* Right side - Slideshow */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative aspect-[3/2] w-full overflow-hidden rounded-2xl border border-[#0000000D] bg-white shadow-[0_24px_48px_rgba(17,17,17,0.08)] group"
-          >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentImageIndex}
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{
-                  duration: 0.7,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-                className="relative h-full w-full"
-              >
-                <Image
-                  src={slideshowImages[currentImageIndex]}
-                  alt={`Slideshow image ${currentImageIndex + 1}`}
-                  fill
-                  sizes="(min-width: 1024px) 50vw, 100vw"
-                  className="object-contain"
-                />
-              </motion.div>
-            </AnimatePresence>
+          <div className="relative aspect-[3/2] w-full overflow-hidden rounded-xl sm:rounded-2xl border border-[#0000000D] bg-white shadow-[0_16px_32px_rgba(17,17,17,0.08)] sm:shadow-[0_24px_48px_rgba(17,17,17,0.08)] group order-1 lg:order-2">
+            <div className="relative h-full w-full">
+              <Image
+                src={slideshowImages[currentImageIndex]}
+                alt={`Slideshow image ${currentImageIndex + 1}`}
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-contain"
+              />
+            </div>
 
             {/* Navigation dots */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2"
-            >
+            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
               {slideshowImages.map((_, index) => (
-                <motion.button
+                <button
                   key={index}
                   onClick={() => setCurrentImageIndex(index)}
-                  whileHover={{ scale: 1.2 }}
-                  whileTap={{ scale: 0.9 }}
-                  initial={{ opacity: 0.5 }}
-                  animate={{
-                    opacity: index === currentImageIndex ? 1 : 0.5,
-                    scale: index === currentImageIndex ? 1.1 : 1,
-                  }}
-                  transition={{ duration: 0.2 }}
-                  className={`h-2 rounded-full ${
+                  className={`h-2 rounded-full transition-opacity ${
                     index === currentImageIndex ? 'w-8 bg-[#111111]' : 'w-2 bg-[#111111]/30'
                   }`}
                   aria-label={`Go to slide ${index + 1}`}
                 />
               ))}
-            </motion.div>
+            </div>
 
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>

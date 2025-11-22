@@ -617,6 +617,19 @@ export default function PracticePage() {
                   <span className="text-2xl font-bold text-gray-900">{currentCard.backText}</span>
                 </div>
 
+                {/* German Character Buttons */}
+                <div className="mb-4 flex justify-center gap-2">
+                  {['ä', 'ö', 'ü', 'ß'].map((char) => (
+                    <button
+                      key={char}
+                      onClick={() => insertGermanChar(char)}
+                      className="px-3 py-2 bg-black text-white hover:bg-gray-800 rounded-lg text-lg font-medium transition-colors"
+                    >
+                      {char}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Input Field */}
                 <div className="mb-4">
                   <input
@@ -629,19 +642,6 @@ export default function PracticePage() {
                     style={{ color: '#111827', fontFamily: 'var(--font-inter), system-ui, sans-serif' }}
                     autoFocus
                   />
-                </div>
-
-                {/* German Character Buttons */}
-                <div className="mb-4 flex justify-center gap-2">
-                  {['ä', 'ö', 'ü', 'ß'].map((char) => (
-                    <button
-                      key={char}
-                      onClick={() => insertGermanChar(char)}
-                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-lg font-medium transition-colors"
-                    >
-                      {char}
-                    </button>
-                  ))}
                 </div>
 
                 {/* Show Hint Button */}

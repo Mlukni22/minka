@@ -63,6 +63,13 @@ export default function ChapterReaderPage() {
     return () => unsubscribe();
   }, [router, storyId, chapterNumber]);
 
+  // Reset clicked words and translations when chapter changes
+  useEffect(() => {
+    setClickedWords(new Set());
+    setClickedOccurrences(new Set());
+    setWordTranslations(new Map());
+  }, [storyId, chapterNumber]);
+
 
   // Force re-render when clickedWords or addedToFlashcards changes
   const [renderKey, setRenderKey] = useState(0);

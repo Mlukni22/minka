@@ -759,7 +759,8 @@ export default function ChapterReaderPage() {
       }
       
       // Highlight ALL occurrences if ANY occurrence was clicked, but only show tooltip on clicked one
-      const clickClass = isAdded ? 'bg-green-100 text-green-700' : (wasWordClicked || isThisOccurrenceClicked ? 'bg-blue-50 text-blue-800' : 'text-gray-900 hover:text-gray-700');
+      // Don't show green highlighting based on database state - only show blue when clicked in current session
+      const clickClass = (wasWordClicked || isThisOccurrenceClicked) ? 'bg-blue-50 text-blue-800' : 'text-gray-900 hover:text-gray-700';
       const escapedTranslation = escapeHtml(translation || 'Translation not available');
       const tooltip = showTooltip ? `<span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs px-3 py-2 rounded whitespace-nowrap z-[9999] pointer-events-none shadow-lg before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-4 before:border-transparent before:border-t-gray-900" style="white-space: nowrap; max-width: none; word-wrap: normal; overflow: visible; text-overflow: clip;">${escapedTranslation}</span>` : '';
       const escapedPhrase = escapeHtml(word.phrase);

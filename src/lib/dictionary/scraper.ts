@@ -1,8 +1,5 @@
 import { DictionaryResult, VerbForms } from '@/types/dictionary';
-
-// Import cheerio using require for Next.js server-side compatibility
-const cheerio = require('cheerio');
-const load = cheerio.load;
+import { load } from 'cheerio';
 
 /**
  * Scrape verbformen.com for word translation and verb forms
@@ -112,7 +109,7 @@ export async function scrapeVerbformen(word: string): Promise<DictionaryResult> 
 /**
  * Extract verb forms from conjugation table
  */
-function extractVerbForms($: any): VerbForms | undefined {
+function extractVerbForms($: ReturnType<typeof load>): VerbForms | undefined {
   try {
     // Find conjugation table
     const table = $('table[id*="konjugation"], table[id*="conjugation"], .konjugation table, .conjugation table').first();

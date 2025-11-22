@@ -152,16 +152,16 @@ export async function rateFlashcard(
 }
 
 /**
- * Check if flashcard exists for user and word
+ * Check if flashcard exists by wordId (legacy field)
  */
-export async function flashcardExists(userId: string, wordId: string): Promise<boolean> {
+export async function flashcardExistsByWordId(userId: string, wordId: string): Promise<boolean> {
   try {
     const flashcardsRef = collection(getDb(), 'users', userId, 'flashcards');
     const q = query(flashcardsRef, where('wordId', '==', wordId));
     const snapshot = await getDocs(q);
     return !snapshot.empty;
   } catch (error) {
-    console.error('Error checking flashcard existence:', error);
+    console.error('Error checking flashcard existence by wordId:', error);
     return false;
   }
 }
@@ -348,16 +348,27 @@ export async function flashcardExistsByFrontText(userId: string, frontText: stri
 }
 
 /**
- * Check if flashcard exists by either storyWordId or frontText
+ * Check if flashcard exists by wordId, storyWordId, or frontText
  */
-export async function flashcardExists(userId: string, storyWordId?: string, frontText?: string): Promise<boolean> {
-  // First check by storyWordId if provided
+export async function flashcardExists(
+  userId: string, 
+  wordId?: string, 
+  storyWordId?: string, 
+  frontText?: string
+): Promise<boolean> {
+  // First check by wordId if provided (legacy)
+  if (wordId) {
+    const existsByWordId = await flashcardExistsByWordId(userId, wordId);
+    if (existsByWordId) return true;
+  }
+  
+  // Then check by storyWordId if provided
   if (storyWordId) {
     const existsById = await flashcardExistsForStoryWord(userId, storyWordId);
     if (existsById) return true;
   }
   
-  // Then check by frontText if provided
+  // Finally check by frontText if provided
   if (frontText) {
     const existsByText = await flashcardExistsByFrontText(userId, frontText);
     if (existsByText) return true;

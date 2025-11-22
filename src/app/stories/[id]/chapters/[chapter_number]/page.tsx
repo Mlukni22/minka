@@ -101,7 +101,8 @@ export default function ChapterReaderPage() {
       if (uid) {
         const existingFlashcards = new Set<string>();
         for (const word of wordsData) {
-          const exists = await flashcardExists(uid, word.id);
+          // Check by storyWordId (word.id is the story word ID)
+          const exists = await flashcardExists(uid, undefined, word.id);
           if (exists) {
             existingFlashcards.add(word.id);
           }

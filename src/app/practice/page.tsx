@@ -170,7 +170,7 @@ export default function PracticePage() {
           console.error('Error reviewing flashcard:', error);
           alert('Failed to save review. Please try again.');
         }
-      }, 1500); // Show "Correct!" message for 1.5 seconds before auto-advancing
+      }, 800); // Show "Correct!" message for 0.8 seconds before auto-advancing
     }
   };
 
@@ -613,8 +613,8 @@ export default function PracticePage() {
 
                 {/* Meaning */}
                 <div className="mb-6">
-                  <span className="text-sm text-gray-600">Meaning: </span>
-                  <span className="text-sm font-bold text-gray-900">{currentCard.backText}</span>
+                  <span className="text-base text-gray-600">Meaning: </span>
+                  <span className="text-2xl font-bold text-gray-900">{currentCard.backText}</span>
                 </div>
 
                 {/* Input Field */}

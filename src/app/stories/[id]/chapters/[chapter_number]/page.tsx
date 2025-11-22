@@ -1362,7 +1362,7 @@ export default function ChapterReaderPage() {
               </Link>
               <Link href="/practice">
                 <Button variant="accent" className="flex-1">
-                  Start Review Now
+                  Review Flashcards
                 </Button>
               </Link>
             </div>

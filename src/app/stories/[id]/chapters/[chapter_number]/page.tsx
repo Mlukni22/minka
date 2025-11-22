@@ -187,7 +187,7 @@ export default function ChapterReaderPage() {
     
     const wordKey = wordPhrase.toLowerCase();
     
-    // Get translation - check vocabulary first, then translation dictionary
+    // Get translation - check vocabulary first, then fetch from dictionary API
     let translation = wordTranslation;
     if (!translation) {
       // Check if this word matches any vocabulary word (by full phrase or base word)
@@ -199,10 +199,24 @@ export default function ChapterReaderPage() {
       if (vocabWord) {
         translation = vocabWord.translation;
       } else {
-        // Try to get translation from dictionary
+        // Try to get translation from local dictionary first
         const dictTranslation = getTranslation(wordPhrase);
-        if (dictTranslation) {
+        if (dictTranslation && !dictTranslation.startsWith('[')) {
           translation = dictTranslation;
+        } else {
+          // Fetch from dictionary API
+          try {
+            const response = await fetch(`/api/dictionary?word=${encodeURIComponent(wordPhrase.trim())}`);
+            if (response.ok) {
+              const dictResult = await response.json();
+              if (dictResult.translation && dictResult.translation !== 'Not found' && !dictResult.error) {
+                translation = dictResult.translation;
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching translation from dictionary API:', error);
+            // Fall through to use fallback
+          }
         }
       }
     }
@@ -276,27 +290,23 @@ export default function ChapterReaderPage() {
       setClickedWords(prev => new Set([...prev, ...Array.from(keysToAdd)]));
     }
     
-    // Always set translation (so tooltip appears)
-    // If no translation found, try one more time with getTranslationWithFallback
-    if (!translation) {
-      translation = getTranslationWithFallback(wordPhrase, `[${wordPhrase}]`);
-    }
-    
     // Store translation under multiple keys so all occurrences can find it
-    setWordTranslations(prev => {
-      const newMap = new Map(prev);
-      const finalTranslation = translation || `[${wordPhrase}]`;
-      
-      // Store under all possible keys
-      newMap.set(wordKey, finalTranslation);
-      newMap.set(baseWordKey, finalTranslation);
-      newMap.set(wordPhrase.toLowerCase(), finalTranslation);
-      if (wordId) {
-        newMap.set(wordId, finalTranslation);
-      }
-      
-      return newMap;
-    });
+    // Only store if we have a valid translation (not in brackets)
+    if (translation && !translation.startsWith('[') && translation !== wordPhrase) {
+      setWordTranslations(prev => {
+        const newMap = new Map(prev);
+        
+        // Store under all possible keys
+        newMap.set(wordKey, translation);
+        newMap.set(baseWordKey, translation);
+        newMap.set(wordPhrase.toLowerCase(), translation);
+        if (wordId) {
+          newMap.set(wordId, translation);
+        }
+        
+        return newMap;
+      });
+    }
     
     // Force re-render to show translation
     setRenderKey(prev => prev + 1);
@@ -758,11 +768,14 @@ export default function ChapterReaderPage() {
         translation = wordTranslations.get(matchKey)!;
       }
       
+      // Only show tooltip if we have a valid translation (not in brackets)
+      const hasValidTranslation = translation && !translation.startsWith('[') && translation !== word.phrase;
+      
       // Highlight ALL occurrences if ANY occurrence was clicked, but only show tooltip on clicked one
       // Don't show green highlighting based on database state - only show blue when clicked in current session
       const clickClass = (wasWordClicked || isThisOccurrenceClicked) ? 'bg-blue-50 text-blue-800' : 'text-gray-900 hover:text-gray-700';
-      const escapedTranslation = escapeHtml(translation || 'Translation not available');
-      const tooltip = showTooltip ? `<span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs px-3 py-2 rounded whitespace-nowrap z-[9999] pointer-events-none shadow-lg before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-4 before:border-transparent before:border-t-gray-900" style="white-space: nowrap; max-width: none; word-wrap: normal; overflow: visible; text-overflow: clip;">${escapedTranslation}</span>` : '';
+      const escapedTranslation = escapeHtml(hasValidTranslation ? translation : 'Translation not available');
+      const tooltip = showTooltip && hasValidTranslation ? `<span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs px-3 py-2 rounded whitespace-nowrap z-[9999] pointer-events-none shadow-lg before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-4 before:border-transparent before:border-t-gray-900" style="white-space: nowrap; max-width: none; word-wrap: normal; overflow: visible; text-overflow: clip;">${escapedTranslation}</span>` : '';
       const escapedPhrase = escapeHtml(word.phrase);
       const escapedWordTranslation = escapeHtml(word.translation);
       const escapedMatch = escapeHtmlContent(range.match);
@@ -901,11 +914,15 @@ export default function ChapterReaderPage() {
           } else if (vocabWord) {
             translation = vocabWord.translation;
           } else {
-            translation = getTranslation(wordText) || '';
+            const dictTranslation = getTranslation(wordText);
+            translation = dictTranslation && !dictTranslation.startsWith('[') ? dictTranslation : '';
           }
           
-          const escapedTranslation = escapeHtml(translation || 'Translation not available');
-          const tooltip = showTooltip && translation ? `<span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs px-3 py-2 rounded whitespace-nowrap z-[9999] pointer-events-none shadow-lg before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-4 before:border-transparent before:border-t-gray-900" style="white-space: nowrap; max-width: none; word-wrap: normal; overflow: visible; text-overflow: clip;">${escapedTranslation}</span>` : '';
+          // Only show tooltip if we have a valid translation (not in brackets)
+          const hasValidTranslation = translation && !translation.startsWith('[') && translation !== wordText;
+          
+          const escapedTranslation = escapeHtml(hasValidTranslation ? translation : 'Translation not available');
+          const tooltip = showTooltip && hasValidTranslation ? `<span class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs px-3 py-2 rounded whitespace-nowrap z-[9999] pointer-events-none shadow-lg before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-4 before:border-transparent before:border-t-gray-900" style="white-space: nowrap; max-width: none; word-wrap: normal; overflow: visible; text-overflow: clip;">${escapedTranslation}</span>` : '';
           // Highlight ALL occurrences if ANY occurrence was clicked, but only show tooltip on clicked one
           const clickClass = isThisOccurrenceClicked || wasWordClicked ? 'bg-blue-100 text-blue-700' : 'text-gray-900 hover:text-blue-600';
           const escapedWordText = escapeHtml(wordText);

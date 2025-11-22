@@ -1,4 +1,4 @@
-import * as cheerio from 'cheerio';
+import { load } from 'cheerio';
 import { DictionaryResult, VerbForms } from '@/types/dictionary';
 
 /**
@@ -28,7 +28,7 @@ export async function scrapeVerbformen(word: string): Promise<DictionaryResult> 
     }
     
     const html = await response.text();
-    const $ = cheerio.load(html);
+    const $ = load(html);
     
     // Extract translation
     let translation = '';
@@ -109,7 +109,7 @@ export async function scrapeVerbformen(word: string): Promise<DictionaryResult> 
 /**
  * Extract verb forms from conjugation table
  */
-function extractVerbForms($: cheerio.CheerioAPI): VerbForms | undefined {
+function extractVerbForms($: ReturnType<typeof load>): VerbForms | undefined {
   try {
     // Find conjugation table
     const table = $('table[id*="konjugation"], table[id*="conjugation"], .konjugation table, .conjugation table').first();

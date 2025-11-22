@@ -135,6 +135,15 @@ export default function Header({ brand, links, cta }: HeaderProps) {
               >
                 Practice
               </a>
+              <a
+                href="/dictionary"
+                className={cn(
+                  'transition-colors text-sm lg:text-base py-2 px-1',
+                  isScrolled ? 'text-[#6B7280] hover:text-[#111111]' : 'text-[#293033] hover:text-[#111111]',
+                )}
+              >
+                Dictionary
+              </a>
             </>
           )}
         </nav>
@@ -174,6 +183,13 @@ export default function Header({ brand, links, cta }: HeaderProps) {
                     onClick={() => setShowUserMenu(false)}
                   >
                     Practice
+                  </a>
+                  <a
+                    href="/dictionary"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setShowUserMenu(false)}
+                  >
+                    Dictionary
                   </a>
                   <hr className="my-2" />
                   <button
@@ -251,6 +267,13 @@ export default function Header({ brand, links, cta }: HeaderProps) {
                   className="block py-3 text-base font-medium text-[#111111] transition-colors hover:text-[#8C6BFF] border-b border-[#0000000D]"
                 >
                   Practice
+                </a>
+                <a
+                  href="/dictionary"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block py-3 text-base font-medium text-[#111111] transition-colors hover:text-[#8C6BFF] border-b border-[#0000000D]"
+                >
+                  Dictionary
                 </a>
                 <a
                   href="/profile"

@@ -8,8 +8,8 @@
  * This script uses the API endpoint to add words.
  */
 
-const STORY_ID = 'YOUR_STORY_ID'; // Update this
-const CHAPTER_ID = 'YOUR_CHAPTER_ID'; // Update this
+const STORY_ID = 'minka-ist-new'; // Update this
+const CHAPTER_ID = '4uRM7WUDnCoxAUTnxXpZ'; // Update this
 const API_URL = 'http://localhost:3000'; // Update if different
 
 // Vocabulary words in order of appearance

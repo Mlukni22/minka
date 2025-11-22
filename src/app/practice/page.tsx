@@ -118,13 +118,60 @@ export default function PracticePage() {
     }
   };
 
-  const handleTypeBCheck = () => {
-    if (!cards[currentIndex]) return;
+  const handleTypeBCheck = async () => {
+    if (!cards[currentIndex] || !userId) return;
     
     const card = cards[currentIndex];
     const validation = validateAnswer(userAnswer, card.frontText);
     setValidationResult(validation);
     setShowResult(true);
+    
+    // If answer is correct, automatically submit review with rating 3 (Good) and move to next card
+    if (validation.isCorrect) {
+      // Small delay to show the "Correct!" message
+      setTimeout(async () => {
+        try {
+          const response = await fetch('/api/flashcards/review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              flashcardId: card.id,
+              rating: 3, // "Good" rating for correct answer
+              cardType: card.displayType,
+              userAnswer: userAnswer,
+              isCorrect: true,
+            }),
+          });
+
+          if (!response.ok) throw new Error('Failed to save review');
+
+          setCardsReviewed(cardsReviewed + 1);
+
+          // Reset Type B state
+          setUserAnswer('');
+          setShowHint(false);
+          setValidationResult(null);
+          setShowResult(false);
+
+          // Move to next card
+          const nextIndex = currentIndex + 1;
+          if (nextIndex >= cards.length) {
+            setSessionComplete(true);
+          } else {
+            setCurrentIndex(nextIndex);
+            setShowAnswer(false);
+            // Focus input for Type B
+            if (cards[nextIndex]?.displayType === 'B') {
+              setTimeout(() => inputRef.current?.focus(), 100);
+            }
+          }
+        } catch (error) {
+          console.error('Error reviewing flashcard:', error);
+          alert('Failed to save review. Please try again.');
+        }
+      }, 1500); // Show "Correct!" message for 1.5 seconds before auto-advancing
+    }
   };
 
   const handleReview = async (rating: 0 | 1 | 2 | 3) => {
@@ -228,8 +275,9 @@ export default function PracticePage() {
         } else if (e.key === ' ' && !showResult) {
           e.preventDefault();
           setShowHint(true);
-        } else if (showResult) {
-          // After result shown, use number keys for rating
+        } else if (showResult && validationResult && !validationResult.isCorrect) {
+          // After result shown (and incorrect), use number keys for rating
+          // If correct, auto-advance happens, so no rating needed
           if (e.key === '1') handleReview(0);
           else if (e.key === '2') handleReview(1);
           else if (e.key === '3') handleReview(2);
@@ -253,7 +301,7 @@ export default function PracticePage() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [showAnswer, showResult, sessionComplete, loading, currentIndex, cards, userAnswer]);
+  }, [showAnswer, showResult, sessionComplete, loading, currentIndex, cards, userAnswer, validationResult]);
 
   // Highlight word in context sentence
   const highlightWordInContext = (sentence: string, word: string): string => {
@@ -632,7 +680,7 @@ export default function PracticePage() {
               // Result phase
               <div className="text-center w-full max-w-lg">
                 {validationResult?.isCorrect ? (
-                  // Correct
+                  // Correct - Auto-advancing
                   <div className="mb-6">
                     <div className="text-3xl font-bold text-green-600 mb-4">Correct! ✓</div>
                     <div className="p-4 bg-green-50 rounded-lg mb-4">
@@ -645,6 +693,9 @@ export default function PracticePage() {
                           ),
                         }}
                       />
+                    </div>
+                    <div className="text-sm text-gray-600 animate-pulse">
+                      Auto-advancing to next card...
                     </div>
                   </div>
                 ) : (
@@ -661,49 +712,51 @@ export default function PracticePage() {
                   </div>
                 )}
 
-                {/* Rating Buttons */}
-                <div className="space-y-4">
-                  <div className="text-sm font-medium text-gray-700 mb-4">
-                    How well did you know this?
+                {/* Rating Buttons - Only show if answer is incorrect */}
+                {!validationResult?.isCorrect && (
+                  <div className="space-y-4">
+                    <div className="text-sm font-medium text-gray-700 mb-4">
+                      How well did you know this?
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <Button
+                        onClick={() => handleReview(0)}
+                        variant="secondary"
+                        className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
+                      >
+                        Again
+                        <span className="ml-2 text-xs opacity-75">(1)</span>
+                      </Button>
+                      <Button
+                        onClick={() => handleReview(1)}
+                        variant="secondary"
+                        className="bg-orange-50 text-orange-700 hover:bg-orange-100 border-orange-200"
+                      >
+                        Hard
+                        <span className="ml-2 text-xs opacity-75">(2)</span>
+                      </Button>
+                      <Button
+                        onClick={() => handleReview(2)}
+                        variant="secondary"
+                        className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
+                      >
+                        Good
+                        <span className="ml-2 text-xs opacity-75">(3)</span>
+                      </Button>
+                      <Button
+                        onClick={() => handleReview(3)}
+                        variant="secondary"
+                        className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
+                      >
+                        Easy
+                        <span className="ml-2 text-xs opacity-75">(4)</span>
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-4">
+                      Press <kbd className="px-2 py-1 bg-gray-100 rounded">1-4</kbd> to rate
+                    </p>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <Button
-                      onClick={() => handleReview(0)}
-                      variant="secondary"
-                      className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
-                    >
-                      Again
-                      <span className="ml-2 text-xs opacity-75">(1)</span>
-                    </Button>
-                    <Button
-                      onClick={() => handleReview(1)}
-                      variant="secondary"
-                      className="bg-orange-50 text-orange-700 hover:bg-orange-100 border-orange-200"
-                    >
-                      Hard
-                      <span className="ml-2 text-xs opacity-75">(2)</span>
-                    </Button>
-                    <Button
-                      onClick={() => handleReview(2)}
-                      variant="secondary"
-                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
-                    >
-                      Good
-                      <span className="ml-2 text-xs opacity-75">(3)</span>
-                    </Button>
-                    <Button
-                      onClick={() => handleReview(3)}
-                      variant="secondary"
-                      className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
-                    >
-                      Easy
-                      <span className="ml-2 text-xs opacity-75">(4)</span>
-                    </Button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-4">
-                    Press <kbd className="px-2 py-1 bg-gray-100 rounded">1-4</kbd> to rate
-                  </p>
-                </div>
+                )}
               </div>
             )
           )}

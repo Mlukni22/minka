@@ -126,52 +126,53 @@ export default function PracticePage() {
     setValidationResult(validation);
     setShowResult(true);
     
-    // If answer is correct, automatically submit review with rating 3 (Good) and move to next card
-    if (validation.isCorrect) {
-      // Immediately advance to next card
-      (async () => {
-        try {
-          const response = await fetch('/api/flashcards/review', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId,
-              flashcardId: card.id,
-              rating: 3, // "Good" rating for correct answer
-              cardType: card.displayType,
-              userAnswer: userAnswer,
-              isCorrect: true,
-            }),
-          });
+    // Automatically submit review and move to next card
+    // Correct: rating 3 (Good), Incorrect: rating 1 (Hard)
+    const rating = validation.isCorrect ? 3 : 1;
+    
+    // Immediately advance to next card
+    (async () => {
+      try {
+        const response = await fetch('/api/flashcards/review', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            flashcardId: card.id,
+            rating,
+            cardType: card.displayType,
+            userAnswer: userAnswer,
+            isCorrect: validation.isCorrect,
+          }),
+        });
 
-          if (!response.ok) throw new Error('Failed to save review');
+        if (!response.ok) throw new Error('Failed to save review');
 
-          setCardsReviewed(cardsReviewed + 1);
+        setCardsReviewed(cardsReviewed + 1);
 
-          // Reset Type B state
-          setUserAnswer('');
-          setShowHint(false);
-          setValidationResult(null);
-          setShowResult(false);
+        // Reset Type B state
+        setUserAnswer('');
+        setShowHint(false);
+        setValidationResult(null);
+        setShowResult(false);
 
-          // Move to next card
-          const nextIndex = currentIndex + 1;
-          if (nextIndex >= cards.length) {
-            setSessionComplete(true);
-          } else {
-            setCurrentIndex(nextIndex);
-            setShowAnswer(false);
-            // Focus input for Type B
-            if (cards[nextIndex]?.displayType === 'B') {
-              setTimeout(() => inputRef.current?.focus(), 100);
-            }
+        // Move to next card
+        const nextIndex = currentIndex + 1;
+        if (nextIndex >= cards.length) {
+          setSessionComplete(true);
+        } else {
+          setCurrentIndex(nextIndex);
+          setShowAnswer(false);
+          // Focus input for Type B
+          if (cards[nextIndex]?.displayType === 'B') {
+            setTimeout(() => inputRef.current?.focus(), 100);
           }
-        } catch (error) {
-          console.error('Error reviewing flashcard:', error);
-          alert('Failed to save review. Please try again.');
         }
-      })();
-    }
+      } catch (error) {
+        console.error('Error reviewing flashcard:', error);
+        alert('Failed to save review. Please try again.');
+      }
+    })();
   };
 
   const handleReview = async (rating: 0 | 1 | 2 | 3) => {
@@ -269,19 +270,13 @@ export default function PracticePage() {
 
       if (isTypeB) {
         // Type B: Enter checks answer, Space shows hint
+        // Both correct and incorrect answers are auto-rated and auto-advance
         if (e.key === 'Enter' && !showResult && userAnswer.trim()) {
           e.preventDefault();
           handleTypeBCheck();
         } else if (e.key === ' ' && !showResult) {
           e.preventDefault();
           setShowHint(true);
-        } else if (showResult && validationResult && !validationResult.isCorrect) {
-          // After result shown (and incorrect), use number keys for rating
-          // If correct, auto-advance happens, so no rating needed
-          if (e.key === '1') handleReview(0);
-          else if (e.key === '2') handleReview(1);
-          else if (e.key === '3') handleReview(2);
-          else if (e.key === '4') handleReview(3);
         }
       } else {
         // Type A: Space/Enter toggles reveal
@@ -696,7 +691,7 @@ export default function PracticePage() {
                     </div>
                   </div>
                 ) : (
-                  // Incorrect
+                  // Incorrect - Auto-advancing
                   <div className="mb-6">
                     <div className="text-3xl font-bold text-red-600 mb-4">Incorrect ✗</div>
                     <div className="p-4 bg-red-50 rounded-lg mb-4 space-y-2">
@@ -706,52 +701,6 @@ export default function PracticePage() {
                       <div className="text-lg font-semibold text-green-700">{currentCard.frontText}</div>
                       <div className="text-sm text-gray-600 mt-2">Translation: <span className="font-semibold">{currentCard.backText}</span></div>
                     </div>
-                  </div>
-                )}
-
-                {/* Rating Buttons - Only show if answer is incorrect */}
-                {!validationResult?.isCorrect && (
-                  <div className="space-y-4">
-                    <div className="text-sm font-medium text-gray-700 mb-4">
-                      How well did you know this?
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <Button
-                        onClick={() => handleReview(0)}
-                        variant="secondary"
-                        className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
-                      >
-                        Again
-                        <span className="ml-2 text-xs opacity-75">(1)</span>
-                      </Button>
-                      <Button
-                        onClick={() => handleReview(1)}
-                        variant="secondary"
-                        className="bg-orange-50 text-orange-700 hover:bg-orange-100 border-orange-200"
-                      >
-                        Hard
-                        <span className="ml-2 text-xs opacity-75">(2)</span>
-                      </Button>
-                      <Button
-                        onClick={() => handleReview(2)}
-                        variant="secondary"
-                        className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
-                      >
-                        Good
-                        <span className="ml-2 text-xs opacity-75">(3)</span>
-                      </Button>
-                      <Button
-                        onClick={() => handleReview(3)}
-                        variant="secondary"
-                        className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
-                      >
-                        Easy
-                        <span className="ml-2 text-xs opacity-75">(4)</span>
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-4">
-                      Press <kbd className="px-2 py-1 bg-gray-100 rounded">1-4</kbd> to rate
-                    </p>
                   </div>
                 )}
               </div>

@@ -17,7 +17,7 @@ import {
   updateUserChapterProgress 
 } from '@/lib/db/user-progress';
 import { updateUserData, getUserData, awardXP, incrementStoriesCompleted } from '@/lib/db/user';
-import { addFlashcard, flashcardExists, createFlashcardWithContext, flashcardExistsForStoryWord } from '@/lib/db/flashcards';
+import { addFlashcard, flashcardExists, createFlashcardWithContext, flashcardExistsForStoryWord, flashcardExistsByFrontText } from '@/lib/db/flashcards';
 import { Story, StoryChapter, StoryBlock, StoryWord, UserStoryProgress, UserChapterProgress } from '@/types/story';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -295,8 +295,18 @@ export default function ChapterReaderPage() {
     
     console.log('Word clicked:', wordPhrase, 'Translation:', translation || 'not found', 'WordKey:', wordKey);
     
-    // Add to flashcards - ALWAYS add, even without translation
+    // Add to flashcards - ONLY if translation is available
     if (!userId || !story || !chapter) return;
+    
+    // REQUIRE translation before creating flashcard
+    if (!translation || translation.startsWith('[') || translation === `[${wordPhrase}]`) {
+      console.warn('[Story Reader] Cannot create flashcard - missing translation:', {
+        wordPhrase,
+        translation,
+        wordId,
+      });
+      return;
+    }
     
     // Helper to find context sentence from blocks
     const findContextSentence = (targetWord: string): string => {
@@ -319,53 +329,55 @@ export default function ChapterReaderPage() {
           return;
         }
         
-        // Check if exists in database
-        const exists = await flashcardExistsForStoryWord(userId, wordId);
-        if (!exists) {
-          const word = words.find(w => w.id === wordId);
-          if (word) {
-            const contextSentence = word.exampleSentence || findContextSentence(word.phrase);
-            
-            // Validate before creating
-            if (!word.phrase || !word.translation) {
-              console.error('[Story Reader] Cannot create flashcard - missing phrase or translation:', {
-                phrase: word.phrase,
-                translation: word.translation,
-                word,
-              });
-              return;
-            }
-            
-            console.log('[Story Reader] Creating flashcard:', {
+        // Check if exists in database (by storyWordId or frontText)
+        const word = words.find(w => w.id === wordId);
+        if (!word) return;
+        
+        const existsById = await flashcardExistsForStoryWord(userId, wordId);
+        const existsByText = await flashcardExistsByFrontText(userId, word.phrase);
+        
+        if (!existsById && !existsByText) {
+          const contextSentence = word.exampleSentence || findContextSentence(word.phrase);
+          
+          // Validate before creating - REQUIRE translation
+          if (!word.phrase || !word.translation || !word.translation.trim()) {
+            console.error('[Story Reader] Cannot create flashcard - missing phrase or translation:', {
               phrase: word.phrase,
               translation: word.translation,
-              contextSentence,
-              wordId: word.id,
+              word,
             });
-            
-            await createFlashcardWithContext(userId, {
-              languageCode: 'de',
-              frontText: word.phrase.trim(),
-              backText: word.translation.trim(),
-              contextSentence: contextSentence.trim() || word.phrase.trim(),
-              contextTranslation: word.exampleTranslation?.trim(),
-              storyId: story.id,
-              chapterId: chapter.id,
-              storyWordId: word.id,
-            });
-            
-            setAddedToFlashcards(prev => new Set([...prev, word.id]));
-            await awardXP(userId, 3);
-            setFlashcardMessage(`"${word.phrase}" added to flashcards – review later in Practice!`);
-            setTimeout(() => setFlashcardMessage(null), 3000);
+            return;
           }
+          
+          console.log('[Story Reader] Creating flashcard:', {
+            phrase: word.phrase,
+            translation: word.translation,
+            contextSentence,
+            wordId: word.id,
+          });
+          
+          await createFlashcardWithContext(userId, {
+            languageCode: 'de',
+            frontText: word.phrase.trim(),
+            backText: word.translation.trim(),
+            contextSentence: contextSentence.trim() || word.phrase.trim(),
+            contextTranslation: word.exampleTranslation?.trim(),
+            storyId: story.id,
+            chapterId: chapter.id,
+            storyWordId: word.id,
+          });
+          
+          setAddedToFlashcards(prev => new Set([...prev, word.id]));
+          await awardXP(userId, 3);
+          setFlashcardMessage(`"${word.phrase}" added to flashcards – review later in Practice!`);
+          setTimeout(() => setFlashcardMessage(null), 3000);
         } else {
           // Exists in database but not in session state - mark as added silently
           setAddedToFlashcards(prev => new Set([...prev, wordId]));
           // Don't show message if already in database
         }
       } else {
-        // Regular word - create a flashcard (with or without translation)
+        // Regular word - create a flashcard (ONLY if translation is available)
         // Check if we can find this word in vocabulary by phrase match (full phrase or base word)
         const vocabWord = words.find(w => {
           const wPhraseLower = w.phrase.toLowerCase();
@@ -380,12 +392,14 @@ export default function ChapterReaderPage() {
             return;
           }
           
-          const exists = await flashcardExistsForStoryWord(userId, vocabWord.id);
-          if (!exists) {
+          const existsById = await flashcardExistsForStoryWord(userId, vocabWord.id);
+          const existsByText = await flashcardExistsByFrontText(userId, vocabWord.phrase);
+          
+          if (!existsById && !existsByText) {
             const contextSentence = vocabWord.exampleSentence || findContextSentence(vocabWord.phrase);
             
-            // Validate before creating
-            if (!vocabWord.phrase || !vocabWord.translation) {
+            // Validate before creating - REQUIRE translation
+            if (!vocabWord.phrase || !vocabWord.translation || !vocabWord.translation.trim()) {
               console.error('[Story Reader] Cannot create flashcard - missing phrase or translation:', {
                 phrase: vocabWord.phrase,
                 translation: vocabWord.translation,
@@ -422,15 +436,31 @@ export default function ChapterReaderPage() {
             // Don't show message if already in database
           }
         } else {
-          // Create a new flashcard for this word using createFlashcardWithContext
+          // Regular word without vocabulary entry - check for duplicates and require translation
           // Check if already added in this session first
           if (addedToFlashcards.has(wordKey)) {
             // Already added in this session - don't show message again
             return;
           }
           
-          // Use translation if available, otherwise use a placeholder
-          const finalTranslation = (translation || `[Translation for "${wordPhrase}"]`).trim();
+          // Check if exists by frontText
+          const existsByText = await flashcardExistsByFrontText(userId, wordPhrase);
+          if (existsByText) {
+            // Already exists - mark as added silently
+            setAddedToFlashcards(prev => new Set([...prev, wordKey]));
+            return;
+          }
+          
+          // REQUIRE valid translation (not a placeholder)
+          if (!translation || translation.startsWith('[') || translation === `[Translation for "${wordPhrase}"]`) {
+            console.warn('[Story Reader] Cannot create flashcard - missing valid translation:', {
+              wordPhrase,
+              translation,
+              wordKey,
+            });
+            return;
+          }
+          
           const contextSentence = findContextSentence(wordPhrase).trim() || wordPhrase.trim();
           
           // Validate before creating
@@ -445,15 +475,15 @@ export default function ChapterReaderPage() {
           
           console.log('[Story Reader] Creating flashcard for regular word:', {
             phrase: wordPhrase,
-            translation: finalTranslation,
+            translation: translation,
             contextSentence,
           });
           
           try {
-            const flashcardId = await createFlashcardWithContext(userId, {
+            await createFlashcardWithContext(userId, {
               languageCode: 'de',
               frontText: wordPhrase.trim(),
-              backText: finalTranslation,
+              backText: translation.trim(),
               contextSentence,
               storyId: story.id,
               chapterId: chapter.id,

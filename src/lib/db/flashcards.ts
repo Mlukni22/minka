@@ -320,6 +320,53 @@ export async function flashcardExistsForStoryWord(userId: string, storyWordId: s
 }
 
 /**
+ * Check if flashcard exists for user by frontText (to prevent duplicates)
+ */
+export async function flashcardExistsByFrontText(userId: string, frontText: string): Promise<boolean> {
+  try {
+    const trimmedText = frontText.trim();
+    const flashcardsRef = collection(getDb(), 'users', userId, 'flashcards');
+    // Check exact match (case-sensitive)
+    const q = query(flashcardsRef, where('frontText', '==', trimmedText));
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) return true;
+    
+    // Also check case-insensitive match by getting all and comparing
+    const allSnapshot = await getDocs(flashcardsRef);
+    for (const doc of allSnapshot.docs) {
+      const data = doc.data();
+      if (data.frontText && data.frontText.trim().toLowerCase() === trimmedText.toLowerCase()) {
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking flashcard existence by frontText:', error);
+    return false;
+  }
+}
+
+/**
+ * Check if flashcard exists by either storyWordId or frontText
+ */
+export async function flashcardExists(userId: string, storyWordId?: string, frontText?: string): Promise<boolean> {
+  // First check by storyWordId if provided
+  if (storyWordId) {
+    const existsById = await flashcardExistsForStoryWord(userId, storyWordId);
+    if (existsById) return true;
+  }
+  
+  // Then check by frontText if provided
+  if (frontText) {
+    const existsByText = await flashcardExistsByFrontText(userId, frontText);
+    if (existsByText) return true;
+  }
+  
+  return false;
+}
+
+/**
  * Determine which display type to use for a flashcard
  */
 function determineDisplayType(srs: FlashcardSRS): 'A' | 'B' {

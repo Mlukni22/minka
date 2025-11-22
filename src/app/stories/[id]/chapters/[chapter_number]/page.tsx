@@ -1311,7 +1311,7 @@ export default function ChapterReaderPage() {
               
               return (
                 <div className="bg-white rounded-xl shadow-lg p-6 sticky top-24">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Vocabulary</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Wortschatz</h3>
                   <div className="space-y-2">
                     {sortedWords.map((word) => (
                       <div key={word.id} className="text-base leading-relaxed">

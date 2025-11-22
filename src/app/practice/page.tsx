@@ -128,8 +128,8 @@ export default function PracticePage() {
     
     // If answer is correct, automatically submit review with rating 3 (Good) and move to next card
     if (validation.isCorrect) {
-      // Small delay to show the "Correct!" message
-      setTimeout(async () => {
+      // Immediately advance to next card
+      (async () => {
         try {
           const response = await fetch('/api/flashcards/review', {
             method: 'POST',
@@ -170,7 +170,7 @@ export default function PracticePage() {
           console.error('Error reviewing flashcard:', error);
           alert('Failed to save review. Please try again.');
         }
-      }, 800); // Show "Correct!" message for 0.8 seconds before auto-advancing
+      })();
     }
   };
 
@@ -680,7 +680,7 @@ export default function PracticePage() {
               // Result phase
               <div className="text-center w-full max-w-lg">
                 {validationResult?.isCorrect ? (
-                  // Correct - Auto-advancing
+                  // Correct - Immediately advancing
                   <div className="mb-6">
                     <div className="text-3xl font-bold text-green-600 mb-4">Correct! ✓</div>
                     <div className="p-4 bg-green-50 rounded-lg mb-4">
@@ -693,9 +693,6 @@ export default function PracticePage() {
                           ),
                         }}
                       />
-                    </div>
-                    <div className="text-sm text-gray-600 animate-pulse">
-                      Auto-advancing to next card...
                     </div>
                   </div>
                 ) : (

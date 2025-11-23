@@ -511,3 +511,42 @@ export function getTranslationWithFallback(word: string, fallback?: string): str
   // If no translation found and no fallback, return a generic message
   return fallback || `Translation for "${word}" not available`;
 }
+
+/**
+ * Get translation with Dictionary API fallback (async)
+ * First tries local dictionary, then falls back to Dictionary API
+ * @param word - Word to translate
+ * @param fallback - Fallback translation if not found
+ * @returns English translation
+ */
+export async function getTranslationWithAPIFallback(
+  word: string,
+  fallback?: string
+): Promise<string> {
+  // First try local dictionary (fast, offline)
+  const localTranslation = getTranslation(word);
+  if (localTranslation) {
+    return localTranslation;
+  }
+
+  // If word looks like English (starts with English letter pattern), try Dictionary API
+  // This is useful for English words that might appear in German text
+  const isLikelyEnglish = /^[a-zA-Z]+$/.test(word.trim());
+  if (isLikelyEnglish) {
+    try {
+      const { getDictionaryTranslation } = await import('./dictionary-api');
+      const apiTranslation = await getDictionaryTranslation(word);
+      if (apiTranslation) {
+        // Extract a short definition (first sentence or first 100 chars)
+        const shortDef = apiTranslation.split('.')[0].trim();
+        return shortDef.length > 100 ? shortDef.substring(0, 100) + '...' : shortDef;
+      }
+    } catch (error) {
+      console.error('Error fetching from Dictionary API:', error);
+      // Fall through to fallback
+    }
+  }
+
+  // Return fallback if nothing found
+  return fallback || `Translation for "${word}" not available`;
+}

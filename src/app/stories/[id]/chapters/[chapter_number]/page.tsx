@@ -24,6 +24,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTranslation, getTranslationWithFallback } from '@/lib/translations';
+import { getTranslationAlways } from '@/lib/translation-service';
+import { detectSeparableVerbFromClick, extractWordsForDetection } from '@/lib/translation/detect-separable-verb-click';
 
 export default function ChapterReaderPage() {
   const router = useRouter();
@@ -42,6 +44,10 @@ export default function ChapterReaderPage() {
   const [clickedOccurrences, setClickedOccurrences] = useState<Set<string>>(new Set()); // Track specific occurrences by unique ID
   const [wordTranslations, setWordTranslations] = useState<Map<string, string>>(new Map());
   const [addedToFlashcards, setAddedToFlashcards] = useState<Set<string>>(new Set());
+  // Track clicked separable verb patterns: Map<particle, {verb, baseForm, fullText, occurrenceId}>
+  // This ensures particles are only highlighted when part of the same separable verb pattern
+  // occurrenceId is used to only highlight the specific clicked occurrence, not all occurrences
+  const [clickedSeparableVerbs, setClickedSeparableVerbs] = useState<Map<string, { verb: string; particle: string; baseForm: string; fullText: string; occurrenceId?: string }>>(new Map());
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [chapterCompleted, setChapterCompleted] = useState(false);
@@ -68,6 +74,7 @@ export default function ChapterReaderPage() {
     setClickedWords(new Set());
     setClickedOccurrences(new Set());
     setWordTranslations(new Map());
+    setClickedSeparableVerbs(new Map());
   }, [storyId, chapterNumber]);
 
 
@@ -90,6 +97,27 @@ export default function ChapterReaderPage() {
         getUserStoryProgress(uid, storyId),
         getChapterByNumber(storyId, chapterNumber).then(ch => ch ? getUserChapterProgress(uid, ch.id) : null),
       ]);
+
+      // Proactively ensure all words in the chapter have translations
+      // This runs in the background and doesn't block the UI
+      if (chapterData) {
+        // Extract text from blocks for pre-translation
+        const chapterText = blocksData.map(block => (block as any).textContent || (block as any).text || '').join(' ');
+        if (chapterText.trim()) {
+          // Run pre-translation in background (don't await - let it run async)
+          fetch(`/api/stories/${storyId}/ensure-translations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: chapterText,
+              sectionId: chapterData.id,
+              forceRefresh: false,
+            }),
+          }).catch(error => {
+            console.error('Background pre-translation failed (non-critical):', error);
+          });
+        }
+      }
 
       if (!storyData || !chapterData) {
         router.push(`/stories/${storyId}`);
@@ -187,8 +215,45 @@ export default function ChapterReaderPage() {
     
     const wordKey = wordPhrase.toLowerCase();
     
-    // Get translation - check vocabulary first, then translation dictionary
+    // Helper to normalize words for comparison
+    const normalizeWord = (word: string): string => {
+      return word.toLowerCase().trim().replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '');
+    };
+    
+    // Check if this word is part of a separable verb
+    let separableVerbMatch: ReturnType<typeof detectSeparableVerbFromClick> = null;
+    let originalWordPhrase = wordPhrase; // Keep original for display
+    
+    // Try to detect separable verb by looking at the text content
+    // Get the text from blocks to analyze context
+    const textBlocks = blocks.filter(b => b.type === 'TEXT' && (b as any).textContent);
+    const allText = textBlocks.map(b => (b as any).textContent || '').join(' ');
+    
+    if (allText) {
+      const allWords = extractWordsForDetection(allText);
+      const clickedWordIndex = allWords.findIndex(w => 
+        normalizeWord(w.text) === wordKey || 
+        normalizeWord(w.text) === wordPhrase.toLowerCase()
+      );
+      
+      if (clickedWordIndex !== -1) {
+        separableVerbMatch = detectSeparableVerbFromClick(
+          wordPhrase,
+          allWords,
+          clickedWordIndex
+        );
+        
+        if (separableVerbMatch) {
+          // Use base form for translation lookup, but keep original for display
+          originalWordPhrase = separableVerbMatch.fullText; // e.g., "sieht aus"
+          wordPhrase = separableVerbMatch.baseForm; // e.g., "aussehen"
+        }
+      }
+    }
+    
+    // Get translation - use API endpoint for guaranteed translation
     let translation = wordTranslation;
+    
     if (!translation) {
       // Check if this word matches any vocabulary word (by full phrase or base word)
       const vocabWord = words.find(w => {
@@ -198,25 +263,67 @@ export default function ChapterReaderPage() {
       });
       if (vocabWord) {
         translation = vocabWord.translation;
-      } else {
-        // Try to get translation from local dictionary first
-        const dictTranslation = getTranslation(wordPhrase);
-        if (dictTranslation) {
-          translation = dictTranslation;
-        } else {
-          // Fallback to Dictionary API for English words or as last resort
-          try {
-            const { getTranslationWithAPIFallback } = await import('@/lib/translations');
-            const apiTranslation = await getTranslationWithAPIFallback(wordPhrase);
-            if (apiTranslation && !apiTranslation.includes('not available')) {
-              translation = apiTranslation;
+      }
+    }
+    
+    // If still no translation, use dictionary API endpoint for guaranteed translation
+    if (!translation) {
+      try {
+        const response = await fetch(`/api/dictionary/lookup?word=${encodeURIComponent(wordPhrase)}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            translation = data.data.translation;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching translation from API:', error);
+      }
+      
+      // Fallback to local service if API fails - this ALWAYS returns a translation
+      if (!translation || translation.startsWith('[') || translation === wordPhrase) {
+        try {
+          const translationResult = await getTranslationAlways(wordPhrase);
+          // Ensure we have a valid translation (not placeholder or word itself)
+          if (translationResult.translation && 
+              translationResult.translation !== wordPhrase && 
+              !translationResult.translation.startsWith('[')) {
+            translation = translationResult.translation;
+          } else {
+            // If still no good translation, try one more MT call
+            try {
+              const { getLibreTranslate } = await import('@/lib/dictionary-api');
+              const mtTranslation = await getLibreTranslate(wordPhrase, 'de', 'en');
+              if (mtTranslation && mtTranslation.trim() && mtTranslation !== wordPhrase) {
+                translation = mtTranslation.trim();
+              } else {
+                // Last resort: use word itself (better than nothing)
+                translation = wordPhrase;
+              }
+            } catch (mtError) {
+              // Absolute last resort: use word itself
+              translation = wordPhrase;
             }
-          } catch (error) {
-            console.error('Error fetching translation from API:', error);
-            // Continue without API translation
+          }
+        } catch (error) {
+          console.error('Error getting translation:', error);
+          // Try one final MT call
+          try {
+            const { getLibreTranslate } = await import('@/lib/dictionary-api');
+            const mtTranslation = await getLibreTranslate(wordPhrase, 'de', 'en');
+            translation = mtTranslation && mtTranslation.trim() && mtTranslation !== wordPhrase
+              ? mtTranslation.trim()
+              : wordPhrase; // Use word itself as last resort
+          } catch {
+            translation = wordPhrase; // Absolute last resort
           }
         }
       }
+    }
+    
+    // Final safety check: ensure translation is never null or empty
+    if (!translation || translation.trim() === '') {
+      translation = wordPhrase; // Use word itself as translation
     }
     
     // Show translation above the word - track the specific occurrence that was clicked
@@ -258,34 +365,68 @@ export default function ChapterReaderPage() {
       });
     }
     
-    // Also track the word at word level (so ALL occurrences get highlighted)
-    // If toggling off and no other occurrences are clicked, remove word-level highlight
-    const keysToAdd = new Set([wordKey, baseWordKey, wordPhrase]);
-    if (wordId) {
-      keysToAdd.add(wordId);
-    }
-    
-    if (wasAlreadyClicked) {
-      // Toggling off - check if there are other occurrences still clicked
-      const hasOtherOccurrences = Array.from(clickedOccurrences).some(id => 
-        id !== occurrenceId && (
-          id.includes(wordKey) || 
-          id.includes(baseWordKey) || 
-          (wordId && id.startsWith(wordId))
-        )
-      );
+    // For separable verbs, ONLY track the specific occurrence (not word-level)
+    // For regular words, track both occurrence and word-level (so all occurrences get highlighted)
+    if (separableVerbMatch) {
+      // For separable verbs: only track the specific occurrence IDs, not word-level
+      // Store the separable verb pattern with occurrence ID for context-aware highlighting
+      const particleKey = normalizeWord(separableVerbMatch.particleText);
+      const verbKey = normalizeWord(separableVerbMatch.verbText);
       
-      // If no other occurrences are clicked, remove word-level highlight
-      if (!hasOtherOccurrences) {
-        setClickedWords(prev => {
-          const newSet = new Set(prev);
-          keysToAdd.forEach(key => newSet.delete(key));
-          return newSet;
+      // Store occurrence IDs for both verb and particle parts
+      if (occurrenceId) {
+        // Store the occurrence ID in the separable verb map
+        setClickedSeparableVerbs(prev => {
+          const newMap = new Map(prev);
+          if (wasAlreadyClicked) {
+            // Toggling off - remove the occurrence
+            newMap.delete(particleKey);
+          } else {
+            // Toggling on - store with occurrence ID
+            newMap.set(particleKey, {
+              verb: verbKey,
+              particle: particleKey,
+              baseForm: separableVerbMatch.baseForm,
+              fullText: separableVerbMatch.fullText.toLowerCase(),
+              occurrenceId: occurrenceId, // Store the occurrence ID
+            });
+          }
+          return newMap;
         });
       }
+      
+      // For separable verbs, DON'T add to clickedWords - only use occurrence IDs
+      // This ensures only the clicked occurrence is highlighted
     } else {
-      // Toggling on - add word-level highlight
-      setClickedWords(prev => new Set([...prev, ...Array.from(keysToAdd)]));
+      // Regular word: track at word level (so ALL occurrences get highlighted)
+      const keysToAdd = new Set([wordKey, baseWordKey, originalWordPhrase.toLowerCase()]);
+      
+      if (wordId) {
+        keysToAdd.add(wordId);
+      }
+      
+      if (wasAlreadyClicked) {
+        // Toggling off - check if there are other occurrences still clicked
+        const hasOtherOccurrences = Array.from(clickedOccurrences).some(id => 
+          id !== occurrenceId && (
+            id.includes(wordKey) || 
+            id.includes(baseWordKey) || 
+            (wordId && id.startsWith(wordId))
+          )
+        );
+        
+        // If no other occurrences are clicked, remove word-level highlight
+        if (!hasOtherOccurrences) {
+          setClickedWords(prev => {
+            const newSet = new Set(prev);
+            keysToAdd.forEach(key => newSet.delete(key));
+            return newSet;
+          });
+        }
+      } else {
+        // Toggling on - add word-level highlight
+        setClickedWords(prev => new Set([...prev, ...Array.from(keysToAdd)]));
+      }
     }
     
     // Always set translation (so tooltip appears)
@@ -302,7 +443,17 @@ export default function ChapterReaderPage() {
       // Store under all possible keys
       newMap.set(wordKey, finalTranslation);
       newMap.set(baseWordKey, finalTranslation);
+      newMap.set(originalWordPhrase.toLowerCase(), finalTranslation);
       newMap.set(wordPhrase.toLowerCase(), finalTranslation);
+      
+      // If it's a separable verb, store under all related keys
+      if (separableVerbMatch) {
+        newMap.set(normalizeWord(separableVerbMatch.verbText), finalTranslation);
+        newMap.set(normalizeWord(separableVerbMatch.particleText), finalTranslation);
+        newMap.set(separableVerbMatch.fullText.toLowerCase(), finalTranslation);
+        newMap.set(separableVerbMatch.baseForm, finalTranslation);
+      }
+      
       if (wordId) {
         newMap.set(wordId, finalTranslation);
       }
@@ -648,6 +799,16 @@ export default function ChapterReaderPage() {
 
   const highlightWords = (text: string): string => {
     if (!text) return text;
+    
+    // Ensure all required state is initialized
+    if (!words || !Array.isArray(words)) {
+      return text;
+    }
+    if (typeof clickedWords === 'undefined' || typeof clickedOccurrences === 'undefined' || 
+        typeof clickedSeparableVerbs === 'undefined' || typeof addedToFlashcards === 'undefined' ||
+        typeof wordTranslations === 'undefined') {
+      return text;
+    }
 
     // CRITICAL: First, completely strip all HTML to ensure we're working with clean plain text
     let cleanText = stripHtml(text);
@@ -739,35 +900,109 @@ export default function ChapterReaderPage() {
       const occurrenceId = `${word.id || wordKey}_${range.start}_${range.end}`;
       
       // Check if THIS SPECIFIC occurrence has been clicked
-      const isThisOccurrenceClicked = clickedOccurrences.has(occurrenceId);
+      const isThisOccurrenceClicked = clickedOccurrences && clickedOccurrences.has ? clickedOccurrences.has(occurrenceId) : false;
       
       // Check if ANY occurrence of this word has been clicked (for highlighting all occurrences)
-      const wasWordClicked = clickedWords.has(word.id) || 
-                            clickedWords.has(wordKey) || 
-                            clickedWords.has(baseWordKey) ||
-                            clickedWords.has(matchKey) ||
+      // Also check if this word is part of a separable verb that was clicked
+      const wasWordClicked = (clickedWords && clickedWords.has ? clickedWords.has(word.id) : false) || 
+                            (clickedWords && clickedWords.has ? clickedWords.has(wordKey) : false) || 
+                            (clickedWords && clickedWords.has ? clickedWords.has(baseWordKey) : false) ||
+                            (clickedWords && clickedWords.has ? clickedWords.has(matchKey) : false) ||
                             // Check if any occurrence of this word was clicked
-                            Array.from(clickedOccurrences).some(clickedId => {
+                            (clickedOccurrences && clickedOccurrences.size > 0 ? Array.from(clickedOccurrences).some(clickedId => {
                               return clickedId.startsWith(word.id || wordKey) || 
                                      clickedId.includes(wordKey) ||
                                      clickedId.includes(matchKey);
-                            });
+                            }) : false) ||
+                            // Check if this word is part of a separable verb (check all clicked words for separable verb patterns)
+                            (clickedWords && clickedWords.size > 0 ? Array.from(clickedWords).some(clickedWord => {
+                              // Check if clickedWord contains this word as part of a separable verb
+                              // e.g., if "sieht aus" is clicked, both "sieht" and "aus" should be highlighted
+                              const clickedLower = clickedWord.toLowerCase();
+                              const wordLower = wordKey.toLowerCase();
+                              const matchLower = matchKey.toLowerCase();
+                              // Check if clicked word is a separable verb phrase containing this word
+                              // e.g., "sieht aus" contains "sieht" or "aus"
+                              if (clickedLower.includes(' ')) {
+                                const parts = clickedLower.split(/\s+/);
+                                // Check if this word matches any part of the separable verb phrase
+                                if (parts.includes(wordLower) || parts.includes(matchLower)) {
+                                  return true;
+                                }
+                                // Also check if it starts or ends with this word (handles edge cases)
+                                if (clickedLower.startsWith(wordLower + ' ') || 
+                                    clickedLower.endsWith(' ' + wordLower) || 
+                                    clickedLower.includes(' ' + wordLower + ' ') ||
+                                    clickedLower.startsWith(matchLower + ' ') || 
+                                    clickedLower.endsWith(' ' + matchLower) || 
+                                    clickedLower.includes(' ' + matchLower + ' ')) {
+                                  return true;
+                                }
+                              }
+                              return false;
+                            }) : false) ||
+                            // Special check for particles: only highlight if part of the same separable verb pattern
+                            // and the verb is present in the sentence context
+                            (() => {
+                              try {
+                                if (!clickedSeparableVerbs) return false;
+                                const particleInfo = clickedSeparableVerbs.get(wordKey) || clickedSeparableVerbs.get(matchKey);
+                                if (particleInfo && particleInfo.verb) {
+                                  // This is a clicked particle - check if the verb is nearby in the text
+                                  // Use cleanText to find context around this word
+                                  const wordIndex = cleanText.toLowerCase().indexOf(matchKey.toLowerCase());
+                                  if (wordIndex !== -1) {
+                                    // Get surrounding context (within 100 characters or same sentence)
+                                    const contextStart = Math.max(0, wordIndex - 100);
+                                    const contextEnd = Math.min(cleanText.length, wordIndex + matchKey.length + 100);
+                                    const context = cleanText.substring(contextStart, contextEnd).toLowerCase();
+                                    
+                                    // Check if the verb is present in the context
+                                    const verbNormalized = particleInfo.verb.toLowerCase();
+                                    const verbVariations = [
+                                      verbNormalized,
+                                      verbNormalized + 't',  // 3rd person: steht
+                                      verbNormalized + 'st', // 2nd person: stehst
+                                      verbNormalized + 'e',  // 1st person: stehe
+                                      verbNormalized + 'en', // infinitive: stehen
+                                    ];
+                                    
+                                    // Check if any verb variation is in the context
+                                    const verbPresent = verbVariations.some(verbVar => {
+                                      try {
+                                        const regex = new RegExp(`\\b${verbVar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                                        return regex.test(context);
+                                      } catch {
+                                        return false;
+                                      }
+                                    });
+                                    
+                                    return verbPresent;
+                                  }
+                                }
+                              } catch (error) {
+                                console.error('Error checking separable verb particle:', error);
+                              }
+                              return false;
+                            })();
       
       // Only show tooltip if THIS specific occurrence was clicked
       const showTooltip = isThisOccurrenceClicked;
       
-      const isAdded = addedToFlashcards.has(word.id);
+      const isAdded = addedToFlashcards && addedToFlashcards.has ? addedToFlashcards.has(word.id) : false;
       
       // Get translation - prioritize from wordTranslations map, then fallback to word.translation
       let translation = word.translation;
-      if (wordTranslations.has(word.id)) {
-        translation = wordTranslations.get(word.id)!;
-      } else if (wordTranslations.has(wordKey)) {
-        translation = wordTranslations.get(wordKey)!;
-      } else if (wordTranslations.has(baseWordKey)) {
-        translation = wordTranslations.get(baseWordKey)!;
-      } else if (wordTranslations.has(matchKey)) {
-        translation = wordTranslations.get(matchKey)!;
+      if (wordTranslations && wordTranslations.has) {
+        if (wordTranslations.has(word.id)) {
+          translation = wordTranslations.get(word.id)!;
+        } else if (wordTranslations.has(wordKey)) {
+          translation = wordTranslations.get(wordKey)!;
+        } else if (wordTranslations.has(baseWordKey)) {
+          translation = wordTranslations.get(baseWordKey)!;
+        } else if (wordTranslations.has(matchKey)) {
+          translation = wordTranslations.get(matchKey)!;
+        }
       }
       
       // Highlight ALL occurrences if ANY occurrence was clicked, but only show tooltip on clicked one
@@ -869,9 +1104,22 @@ export default function ChapterReaderPage() {
       const result = text.replace(
         /\b([A-Za-zÄÖÜäöüß]{3,})\b/g,
         (match, wordText, offset) => {
-          const skipWords = ['der', 'die', 'das', 'ein', 'eine', 'und', 'oder', 'ist', 'sind', 'ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr', 'mit', 'von', 'zu', 'auf', 'in', 'für', 'an', 'am', 'im', 'zum', 'zur', 'den', 'dem', 'des', 'aber', 'auch', 'nicht', 'nur', 'wie', 'was', 'wer', 'wo', 'wann', 'warum'];
+          const skipWords = ['der', 'die', 'das', 'ein', 'eine', 'und', 'oder', 'ist', 'sind', 'ich', 'du', 'er', 'sie', 'es', 'wir', 'ihr', 'in', 'für', 'am', 'im', 'zum', 'zur', 'den', 'dem', 'des', 'aber', 'auch', 'nicht', 'nur', 'wie', 'was', 'wer', 'wo', 'wann', 'warum'];
           const wordKey = wordText.toLowerCase();
-          if (skipWords.includes(wordKey)) {
+          
+          // Check if this word is part of a clicked separable verb BEFORE skipping
+          // If it's part of a separable verb, don't skip it even if it's in skipWords
+          const isPartOfSeparableVerb = clickedWords && clickedWords.size > 0 ? Array.from(clickedWords).some(clickedWord => {
+            const clickedLower = clickedWord.toLowerCase();
+            if (clickedLower.includes(' ')) {
+              const parts = clickedLower.split(/\s+/);
+              return parts.includes(wordKey);
+            }
+            return false;
+          }) : false;
+          
+          // Only skip if it's in skipWords AND not part of a separable verb
+          if (skipWords.includes(wordKey) && !isPartOfSeparableVerb) {
             return match;
           }
           
@@ -880,18 +1128,87 @@ export default function ChapterReaderPage() {
           const regularOccurrenceId = `regular_${wordKey}_${offset}_${localCounter++}`;
           
           // Check if THIS SPECIFIC occurrence has been clicked
-          const isThisOccurrenceClicked = clickedOccurrences.has(regularOccurrenceId);
+          const isThisOccurrenceClicked = clickedOccurrences && clickedOccurrences.has ? clickedOccurrences.has(regularOccurrenceId) : false;
           
           // Check if ANY occurrence of this word has been clicked (for highlighting all occurrences)
-          const wasWordClicked = clickedWords.has(wordKey) || 
-                               clickedWords.has(baseWordKey) ||
-                               clickedWords.has(wordText) ||
+          // Also check if this word is part of a separable verb that was clicked
+          const wasWordClicked = (clickedWords && clickedWords.has ? clickedWords.has(wordKey) : false) || 
+                               (clickedWords && clickedWords.has ? clickedWords.has(baseWordKey) : false) ||
+                               (clickedWords && clickedWords.has ? clickedWords.has(wordText) : false) ||
                                // Check if any occurrence of this word was clicked
-                               Array.from(clickedOccurrences).some(clickedId => {
+                               (clickedOccurrences && clickedOccurrences.size > 0 ? Array.from(clickedOccurrences).some(clickedId => {
                                  return clickedId.includes(wordKey) || 
                                         clickedId.includes(baseWordKey) ||
                                         clickedId.startsWith(`regular_${wordKey}`);
-                               });
+                               }) : false) ||
+                               // Check if this word is part of a separable verb (check all clicked words for separable verb patterns)
+                               (clickedWords && clickedWords.size > 0 ? Array.from(clickedWords).some(clickedWord => {
+                                 // Check if clickedWord contains this word as part of a separable verb
+                                 // e.g., if "sieht aus" is clicked, both "sieht" and "aus" should be highlighted
+                                 const clickedLower = clickedWord.toLowerCase();
+                                 const wordLower = wordKey.toLowerCase();
+                                 // Check if clicked word is a separable verb phrase containing this word
+                                 // e.g., "sieht aus" contains "sieht" or "aus"
+                                 if (clickedLower.includes(' ')) {
+                                   const parts = clickedLower.split(/\s+/);
+                                   // Check if this word matches any part of the separable verb phrase
+                                   if (parts.includes(wordLower)) {
+                                     return true;
+                                   }
+                                   // Also check if it starts or ends with this word (handles edge cases)
+                                   if (clickedLower.startsWith(wordLower + ' ') || 
+                                       clickedLower.endsWith(' ' + wordLower) || 
+                                       clickedLower.includes(' ' + wordLower + ' ')) {
+                                     return true;
+                                   }
+                                 }
+                                 // Also check if clicked word is the base form (e.g., "aussehen")
+                                 // and this word could be part of it (though this is less common)
+                                 return false;
+                               }) : false) ||
+                               // Special check for particles: only highlight if part of the same separable verb pattern
+                               // and the verb is present in the sentence context
+                               (() => {
+                                 try {
+                                   if (!clickedSeparableVerbs || typeof clickedSeparableVerbs.get !== 'function') {
+                                     return false;
+                                   }
+                                   const particleInfo = clickedSeparableVerbs.get(wordKey);
+                                   if (particleInfo && particleInfo.verb) {
+                                     // This is a clicked particle - check if the verb is nearby in the text
+                                     // Get surrounding context (within 50 characters or same sentence)
+                                     const wordStart = offset;
+                                     const contextStart = Math.max(0, wordStart - 50);
+                                     const contextEnd = Math.min(text.length, wordStart + wordText.length + 50);
+                                     const context = text.substring(contextStart, contextEnd).toLowerCase();
+                                     
+                                     // Check if the verb is present in the context
+                                     const verbNormalized = particleInfo.verb.toLowerCase();
+                                     const verbVariations = [
+                                       verbNormalized,
+                                       verbNormalized + 't',  // 3rd person: steht
+                                       verbNormalized + 'st', // 2nd person: stehst
+                                       verbNormalized + 'e',  // 1st person: stehe
+                                       verbNormalized + 'en', // infinitive: stehen
+                                     ];
+                                     
+                                     // Check if any verb variation is in the context
+                                     const verbPresent = verbVariations.some(verbVar => {
+                                       try {
+                                         const regex = new RegExp(`\\b${verbVar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+                                         return regex.test(context);
+                                       } catch {
+                                         return false;
+                                       }
+                                     });
+                                     
+                                     return verbPresent;
+                                   }
+                                 } catch (error) {
+                                   console.error('Error checking separable verb particle:', error);
+                                 }
+                                 return false;
+                               })();
           
           // Only show tooltip if THIS specific occurrence was clicked
           const showTooltip = isThisOccurrenceClicked;
@@ -995,6 +1312,10 @@ export default function ChapterReaderPage() {
 
   const handleStartExercises = () => {
     router.push(`/stories/${storyId}/chapters/${chapterNumber}/exercises`);
+  };
+
+  const handleStartFlashcards = () => {
+    router.push('/practice');
   };
 
   if (loading) {
@@ -1117,10 +1438,19 @@ export default function ChapterReaderPage() {
                       // Remove all tooltip elements (they have pointer-events-none class)
                       clone.querySelectorAll('.pointer-events-none').forEach(el => el.remove());
                       
-                      // Get the text content - should only be the word now
-                      let text = (clone.textContent || clone.innerText || '').trim();
+                      // Get the text content - use textContent first to preserve special characters like ß
+                      // textContent preserves all characters including ß, while innerText might normalize them
+                      let text = clone.textContent || '';
+                      
+                      // Fallback to innerText if textContent is empty
+                      if (!text.trim() && clone.innerText) {
+                        text = clone.innerText;
+                      }
+                      
+                      text = text.trim();
                       
                       // Clean up the text - remove any HTML artifacts and broken tags
+                      // But preserve special German characters like ß
                       text = text
                         .replace(/<[^>]*>/g, '') // Remove any HTML tags
                         .replace(/span>/gi, '') // Remove "span>" artifacts
@@ -1133,16 +1463,26 @@ export default function ChapterReaderPage() {
                       text = lines.length > 0 ? lines[0] : text;
                       
                       // Take only the first word (in case translation is included)
+                      // Preserve special characters like ß when splitting
                       const wordsInText = text.split(/\s+/).filter(w => w && w.length >= 2 && w !== 'span' && w !== 'span>');
                       text = wordsInText.length > 0 ? wordsInText[0] : text;
                       
                       wordPhrase = text;
                       
                       // Fallback 1: try data-word-key attribute (should be the actual word)
+                      // This is more reliable as it preserves special characters like ß
                       if (!wordPhrase || wordPhrase === 'span' || wordPhrase === 'span>' || wordPhrase.length < 2) {
                         const wordKey = wordElement.getAttribute('data-word-key');
                         if (wordKey && wordKey !== 'span' && wordKey !== 'span>' && wordKey.length >= 2 && !wordKey.includes('<')) {
                           wordPhrase = wordKey;
+                        }
+                      }
+                      
+                      // Also try data-word-phrase again after cleanup (it might have been set correctly)
+                      if ((!wordPhrase || wordPhrase === 'span' || wordPhrase === 'span>' || wordPhrase.length < 2) && wordElement.getAttribute('data-word-phrase')) {
+                        const dataPhrase = wordElement.getAttribute('data-word-phrase');
+                        if (dataPhrase && dataPhrase !== 'span' && dataPhrase !== 'span>' && dataPhrase.length >= 2 && !dataPhrase.includes('<') && !dataPhrase.includes('span')) {
+                          wordPhrase = dataPhrase;
                         }
                       }
                       
@@ -1152,9 +1492,10 @@ export default function ChapterReaderPage() {
                         // Only get direct text nodes, not from child elements
                         for (const node of Array.from(wordElement.childNodes)) {
                           if (node.nodeType === Node.TEXT_NODE) {
+                            // Use textContent to preserve special characters like ß
                             const nodeText = (node as Text).textContent?.trim();
                             if (nodeText && nodeText.length >= 2) {
-                              // Take only first word from text node
+                              // Take only first word from text node (preserve ß)
                               const firstWord = nodeText.split(/\s+/)[0];
                               if (firstWord && firstWord !== 'span' && firstWord !== 'span>') {
                                 directTextNodes.push(firstWord);
@@ -1176,13 +1517,14 @@ export default function ChapterReaderPage() {
                       .trim();
                     
                     // Skip if invalid - must be a valid word
+                    // Note: ß is a valid German character, so we allow it
                     if (!wordPhrase || 
                         wordPhrase === 'span' || 
                         wordPhrase === 'span>' || 
                         wordPhrase.length < 2 || 
                         wordPhrase.includes('<') ||
                         wordPhrase.includes('>') ||
-                        /^[^a-zA-ZÄÖÜäöüß]/.test(wordPhrase)) { // Must start with a letter
+                        /^[^a-zA-ZÄÖÜäöüß]/.test(wordPhrase)) { // Must start with a letter (including ß)
                       console.warn('Invalid word phrase from click:', wordPhrase, 'Element:', wordElement, 'Data attributes:', {
                         'data-word-phrase': wordElement.getAttribute('data-word-phrase'),
                         'data-word-key': wordElement.getAttribute('data-word-key'),
@@ -1262,9 +1604,14 @@ export default function ChapterReaderPage() {
                       <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   )}
-                  <Button onClick={handleStartExercises} variant="secondary">
-                    Start Exercises
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button onClick={handleStartExercises} variant="secondary">
+                      Start Exercises
+                    </Button>
+                    <Button onClick={handleStartFlashcards} variant="secondary">
+                      Start Flashcards
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

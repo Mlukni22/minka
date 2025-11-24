@@ -241,8 +241,7 @@ export async function getChapterBlocks(storyId: string, chapterId: string): Prom
 export async function getChapterWords(storyId: string, chapterId: string): Promise<StoryWord[]> {
   try {
     const wordsRef = collection(getDb(), 'stories', storyId, 'chapters', chapterId, 'words');
-    const q = query(wordsRef, orderBy('orderIndex', 'asc'));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(wordsRef);
     
     return snapshot.docs.map(doc => {
       const data = doc.data();
@@ -273,66 +272,6 @@ export async function getChapterWords(storyId: string, chapterId: string): Promi
 export async function getChapterKeyWords(storyId: string, chapterId: string): Promise<StoryWord[]> {
   const allWords = await getChapterWords(storyId, chapterId);
   return allWords.filter(word => word.isKeyWord);
-}
-
-/**
- * Create or update a story word
- */
-export async function createStoryWord(
-  storyId: string,
-  chapterId: string,
-  word: {
-    phrase: string;
-    translation: string;
-    exampleSentence?: string;
-    exampleTranslation?: string;
-    imageUrl?: string;
-    imageAlt?: string;
-    isKeyWord?: boolean;
-    orderIndex?: number;
-  }
-): Promise<string> {
-  try {
-    const wordsRef = collection(getDb(), 'stories', storyId, 'chapters', chapterId, 'words');
-    const newWordRef = doc(wordsRef);
-    
-    await setDoc(newWordRef, {
-      chapterId,
-      phrase: word.phrase.trim(),
-      translation: word.translation.trim(),
-      exampleSentence: word.exampleSentence?.trim() || null,
-      exampleTranslation: word.exampleTranslation?.trim() || null,
-      imageUrl: word.imageUrl || null,
-      imageAlt: word.imageAlt || null,
-      isKeyWord: word.isKeyWord !== undefined ? word.isKeyWord : true,
-      orderIndex: word.orderIndex || 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    
-    return newWordRef.id;
-  } catch (error) {
-    console.error('Error creating story word:', error);
-    throw error;
-  }
-}
-
-/**
- * Check if a word already exists in a chapter (by phrase, case-insensitive)
- */
-export async function wordExistsInChapter(
-  storyId: string,
-  chapterId: string,
-  phrase: string
-): Promise<boolean> {
-  try {
-    const words = await getChapterWords(storyId, chapterId);
-    const normalizedPhrase = phrase.trim().toLowerCase();
-    return words.some(w => w.phrase.trim().toLowerCase() === normalizedPhrase);
-  } catch (error) {
-    console.error('Error checking word existence:', error);
-    return false;
-  }
 }
 
 // ==================== EXERCISES ====================

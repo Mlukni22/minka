@@ -40,14 +40,85 @@ const translations: Record<string, string> = {
   'wollen': 'want',
   'mögen': 'like',
   'gehen': 'to go',
+  'kommt': 'comes',
+  'komme': 'come',
+  'kommst': 'come',
   'kommen': 'to come',
   'sehen': 'to see',
+  'sieht': 'sees',
+  'siehst': 'see',
   'hören': 'to hear',
+  'hört': 'hears',
+  'hörst': 'hear',
   'sagen': 'to say',
+  'sagt': 'says',
+  'sagst': 'say',
   'machen': 'to make/do',
+  'macht': 'makes/does',
+  'machst': 'make/do',
   'geben': 'to give',
+  'gibt': 'gives',
+  'gibst': 'give',
   'nehmen': 'to take',
+  'nimmt': 'takes',
+  'nimmst': 'take',
   'wissen': 'to know',
+  'weiß': 'knows',
+  'weißt': 'know',
+  'kratzen': 'to scratch',
+  'kratzt': 'scratches',
+  'kratzst': 'scratch',
+  'kratze': 'scratch',
+  // Separable verbs
+  'aussehen': 'to look/appear',
+  'sieht aus': 'looks/appears',
+  'siehst aus': 'look/appear',
+  'siehe aus': 'look/appear',
+  'ausmachen': 'to turn off/switch off',
+  'macht aus': 'turns off',
+  'machst aus': 'turn off',
+  'mache aus': 'turn off',
+  'ausgemacht': 'turned off',
+  'anrufen': 'to call',
+  'ruft an': 'calls',
+  'rufst an': 'call',
+  'rufe an': 'call',
+  'angerufen': 'called',
+  'aufmachen': 'to open',
+  'macht auf': 'opens',
+  'machst auf': 'open',
+  'mache auf': 'open',
+  'aufgemacht': 'opened',
+  'zumachen': 'to close',
+  'macht zu': 'closes',
+  'machst zu': 'close',
+  'mache zu': 'close',
+  'zugemacht': 'closed',
+  'ankommen': 'to arrive',
+  'kommt an': 'arrives',
+  'kommst an': 'arrive',
+  'komme an': 'arrive',
+  'angekommen': 'arrived',
+  'abfahren': 'to depart',
+  'fährt ab': 'departs',
+  'fährst ab': 'depart',
+  'fahre ab': 'depart',
+  'abgefahren': 'departed',
+  'aufstehen': 'to stand up/get up',
+  'steht auf': 'stands up',
+  'stehst auf': 'stand up',
+  'stehe auf': 'stand up',
+  'aufgestanden': 'stood up',
+  'einschlafen': 'to fall asleep',
+  'schläft ein': 'falls asleep',
+  'schläfst ein': 'fall asleep',
+  'schlafe ein': 'fall asleep',
+  'eingeschlafen': 'fallen asleep',
+  'aufwachen': 'to wake up',
+  'wacht auf': 'wakes up',
+  'wachst auf': 'wake up',
+  'wache auf': 'wake up',
+  'aufgewacht': 'woken up',
   'denken': 'to think',
   'finden': 'to find',
   'bleiben': 'to stay',
@@ -76,6 +147,8 @@ const translations: Record<string, string> = {
   'wichtig': 'important',
   'leicht': 'easy/light',
   'schwer': 'heavy/difficult',
+  'barfuß': 'barefoot',
+  'barfus': 'barefoot',
   'schnell': 'fast',
   'langsam': 'slow',
   'heute': 'today',
@@ -84,6 +157,18 @@ const translations: Record<string, string> = {
   'jetzt': 'now',
   'hier': 'here',
   'dort': 'there',
+  'draußen': 'outside',
+  'drinnen': 'inside',
+  'oben': 'up/above',
+  'unten': 'down/below',
+  'links': 'left',
+  'rechts': 'right',
+  'vorne': 'in front',
+  'hinten': 'behind/back',
+  'mitten': 'middle',
+  'irgendwo': 'somewhere',
+  'nirgendwo': 'nowhere',
+  'überall': 'everywhere',
   'viel': 'much/many',
   'wenig': 'little/few',
   'mehr': 'more',
@@ -92,6 +177,75 @@ const translations: Record<string, string> = {
   'jeder': 'every',
   'manche': 'some',
   'kein': 'no/none',
+  'niemand': 'nobody/no one',
+  'jemand': 'someone/somebody',
+  'etwas': 'something',
+  'nichts': 'nothing',
+  'irgendjemand': 'anyone/anybody',
+  'irgendetwas': 'anything',
+  // Possessive pronouns (ihr already defined above as 'you (plural)')
+  'ihre': 'her/their/your (formal)',
+  'ihrem': 'her/their/your (formal)',
+  'ihren': 'her/their/your (formal)',
+  'ihrer': 'her/their/your (formal)',
+  'ihres': 'her/their/your (formal)',
+  'mein': 'my',
+  'meine': 'my',
+  'meinem': 'my',
+  'meinen': 'my',
+  'meiner': 'my',
+  'meines': 'my',
+  'dein': 'your',
+  'deine': 'your',
+  'deinem': 'your',
+  'deinen': 'your',
+  'deiner': 'your',
+  'deines': 'your',
+  // sein already defined above as 'to be'
+  'seine': 'his/its',
+  'seinem': 'his/its',
+  'seinen': 'his/its',
+  'seiner': 'his/its',
+  'seines': 'his/its',
+  'unser': 'our',
+  'unsere': 'our',
+  'unserem': 'our',
+  'unseren': 'our',
+  'unserer': 'our',
+  'unseres': 'our',
+  'euer': 'your (plural)',
+  'eure': 'your (plural)',
+  'eurem': 'your (plural)',
+  'euren': 'your (plural)',
+  'eurer': 'your (plural)',
+  'eures': 'your (plural)',
+  // Body parts and anatomy
+  'schwanz': 'tail',
+  'kopf': 'head',
+  'auge': 'eye',
+  'augen': 'eyes',
+  'nase': 'nose',
+  'mund': 'mouth',
+  'ohr': 'ear',
+  'ohren': 'ears',
+  'hand': 'hand',
+  'hände': 'hands',
+  'fuß': 'foot',
+  'füße': 'feet',
+  'bein': 'leg',
+  'beine': 'legs',
+  'arm': 'arm',
+  'arme': 'arms',
+  'finger': 'finger/fingers',
+  'zehe': 'toe',
+  'zehen': 'toes',
+  'rücken': 'back',
+  'bauch': 'belly/stomach',
+  'brust': 'chest/breast',
+  'herz': 'heart',
+  'herzen': 'hearts',
+  'bett': 'bed',
+  'betten': 'beds',
   'nicht': 'not',
   'auch': 'also',
   'noch': 'still/yet',
@@ -102,6 +256,53 @@ const translations: Record<string, string> = {
   'oft': 'often',
   'manchmal': 'sometimes',
   'selten': 'rarely',
+  'wieder': 'again',
+  'nochmal': 'again/once more',
+  'noch einmal': 'once more',
+  'gerade': 'just/right now',
+  'sofort': 'immediately',
+  'bald': 'soon',
+  'später': 'later',
+  'früher': 'earlier',
+  'dann': 'then',
+  'danach': 'afterwards',
+  'vorher': 'before',
+  'zuerst': 'first',
+  'zuletzt': 'last',
+  'endlich': 'finally',
+  'schließlich': 'finally',
+  'plötzlich': 'suddenly',
+  'vielleicht': 'maybe/perhaps',
+  'wahrscheinlich': 'probably',
+  'sicher': 'certainly/sure',
+  'natürlich': 'naturally/of course',
+  'leider': 'unfortunately',
+  'glücklicherweise': 'fortunately',
+  'hoffentlich': 'hopefully',
+  'besonders': 'especially/particularly',
+  'spezial': 'special',
+  'anf': 'at the beginning/at first',
+  'an': 'at/on/to',
+  'auf': 'on/at/up',
+  'aus': 'out/from',
+  'bei': 'at/near/with',
+  'durch': 'through',
+  'für': 'for',
+  'gegen': 'against',
+  'in': 'in',
+  'mit': 'with',
+  'nach': 'after/to',
+  'ohne': 'without',
+  'über': 'over/above/about',
+  'um': 'around/at',
+  'unter': 'under/below',
+  'von': 'from/of',
+  'vor': 'before/in front of',
+  'zu': 'to/at',
+  'zwischen': 'between',
+  'normal': 'normal',
+  'normalerweise': 'normally/usually',
+  'gewöhnlich': 'usually',
   'heißt': 'is called',
   'bin': 'am',
   'bist': 'are',
@@ -173,7 +374,7 @@ const translations: Record<string, string> = {
   'blau': 'blue',
   'grün': 'green',
   'gelb': 'yellow',
-  'weiß': 'white',
+  // 'weiß': 'white', // Removed - conflicts with "weiß" = knows (verb form)
   'schwarz': 'black',
   'eins': 'one',
   'zwei': 'two',
@@ -202,7 +403,6 @@ const translations: Record<string, string> = {
   'malen': 'to paint',
   'baum': 'tree',
   'tee': 'tea',
-  'unter': 'under',
   'freunde': 'friends',
   'sonne': 'sun',
   'lächeln': 'to smile',
@@ -216,30 +416,64 @@ const translations: Record<string, string> = {
   'große': 'big (feminine)',
   'großer': 'big (masculine)',
   'großes': 'big (neuter)',
-  'habe': 'have (I)',
-  'hast': 'have (you)',
-  'gehe': 'go (I)',
-  'gehst': 'go (you)',
+  'habe': 'have',
+  'hast': 'have',
+  'gehe': 'go',
+  'gehst': 'go',
   'geht': 'goes',
-  'komme': 'come (I)',
-  'kommst': 'come (you)',
-  'kommt': 'comes',
-  'sehe': 'see (I)',
-  'siehst': 'see (you)',
-  'sieht': 'sees',
-  'sage': 'say (I)',
-  'sagst': 'say (you)',
-  'sagt': 'says',
-  'mache': 'make/do (I)',
-  'machst': 'make/do (you)',
-  'macht': 'makes/does',
+  'sehe': 'see',
+  'sage': 'say',
+  'mache': 'make/do',
+  // More verb conjugations
+  'findet': 'finds',
+  'findest': 'find',
+  'finde': 'find',
+  'steht': 'stands',
+  'stehst': 'stand',
+  'stehe': 'stand',
+  'sitzt': 'sits',
+  'sitze': 'sit',
+  'läuft': 'runs/walks',
+  'läufst': 'run/walk',
+  'laufe': 'run/walk',
+  'fährt': 'drives',
+  'fährst': 'drive',
+  'fahre': 'drive',
+  'fliegt': 'flies',
+  'fliegst': 'fly',
+  'fliege': 'fly',
+  'isst': 'eats',
+  'esse': 'eat',
+  'trinkt': 'drinks',
+  'trinkst': 'drink',
+  'trinke': 'drink',
+  'schläft': 'sleeps',
+  'schläfst': 'sleep',
+  'schlafe': 'sleep',
+  'arbeitet': 'works',
+  'arbeitest': 'work',
+  'arbeite': 'work',
+  'lernt': 'learns',
+  'lernst': 'learn',
+  'lerne': 'learn',
+  'spielt': 'plays',
+  'spielst': 'play',
+  'spiele': 'play',
+  'liest': 'reads',
+  'lese': 'read',
+  'schreibt': 'writes',
+  'schreibst': 'write',
+  'schreibe': 'write',
+  'spricht': 'speaks',
+  'sprichst': 'speak',
+  'spreche': 'speak',
+  'versteht': 'understands',
+  'verstehst': 'understand',
+  'verstehe': 'understand',
   // More common words
   'und': 'and',
   'oder': 'or',
   'aber': 'but',
-  'dann': 'then',
-  'später': 'later',
-  'früher': 'earlier',
   'woche': 'week',
   'monat': 'month',
   'jahr': 'year',
@@ -266,22 +500,7 @@ const translations: Record<string, string> = {
   'oktober': 'october',
   'november': 'november',
   'dezember': 'december',
-  // Body parts
-  'kopf': 'head',
-  'auge': 'eye',
-  'augen': 'eyes',
-  'nase': 'nose',
-  'mund': 'mouth',
-  'ohr': 'ear',
-  'ohren': 'ears',
-  'hand': 'hand',
-  'hände': 'hands',
-  'fuß': 'foot',
-  'füße': 'feet',
-  'bein': 'leg',
-  'beine': 'legs',
-  'arm': 'arm',
-  'arme': 'arms',
+  // Body parts (duplicates removed - see above)
   // Food
   'kuchen': 'cake',
   'kekse': 'cookies',
@@ -335,7 +554,20 @@ const translations: Record<string, string> = {
   'suchen': 'to search',
   'bekommen': 'to get/receive',
   'öffnen': 'to open',
+  'öffnet': 'opens',
+  'öffne': 'open',
+  'öffnest': 'open',
   'schließen': 'to close',
+  'schließt': 'closes',
+  'schließe': 'close',
+  'schließest': 'close',
+  'bleibt': 'stays',
+  'bleibe': 'stay',
+  'bleibst': 'stay',
+  'schnuppern': 'to sniff',
+  'schnuppert': 'sniffs',
+  'schnuppere': 'sniff',
+  'schnupperst': 'sniff',
   'helfen': 'to help',
   'brauchen': 'to need',
   'lieben': 'to love',
@@ -454,13 +686,79 @@ export function getTranslation(word: string): string | null {
     return translations[withUnderscores];
   }
   
-  // Try removing common German endings to find base form
-  const endings = ['en', 'er', 'es', 'e', 'n', 's', 't', 'st', 'te', 'ten', 'test', 'tet'];
-  for (const ending of endings) {
+  // Try removing common German verb endings to find infinitive form
+  // Handle verb conjugations more intelligently
+  const verbEndings = [
+    // Present tense endings (try these first as they're most common)
+    't',      // 3rd person singular: bleibt -> bleiben, schließt -> schließen
+    'st',     // 2nd person singular: bleibst -> bleiben, schließt -> schließen
+    'e',      // 1st person singular: bleibe -> bleiben, schließe -> schließen
+    'en',     // infinitive/plural: bleiben, schließen
+    'n',      // sometimes used: bleibn -> bleiben
+    // Past tense endings
+    'te',     // past tense: bliebte -> bleiben
+    'ten',    // past tense plural: bliebten -> bleiben
+    'test',   // past tense 2nd person: bliebtest -> bleiben
+    'tet',    // past tense 2nd person plural: bliebtet -> bleiben
+    // Other endings
+    'er',     // comparative: größer -> groß
+    'es',     // genitive: großes -> groß
+    's',      // genitive/possessive: großs -> groß
+  ];
+  
+  for (const ending of verbEndings) {
     if (normalized.endsWith(ending) && normalized.length > ending.length) {
-      const baseForm = normalized.slice(0, -ending.length);
+      let baseForm = normalized.slice(0, -ending.length);
+      
+      // Special handling for verbs ending in 't' or 'st' - try adding 'en' to get infinitive
+      if (ending === 't' || ending === 'st') {
+        // Try adding 'en' to get infinitive form (e.g., bleibt -> bleiben, schließt -> schließen)
+        const infinitiveForm = baseForm + 'en';
+        if (translations[infinitiveForm]) {
+          return translations[infinitiveForm];
+        }
+      }
+      
+      // Try the base form directly
       if (translations[baseForm]) {
         return translations[baseForm];
+      }
+      
+      // For verbs ending in 't', also try adding 'en' to base form (fallback)
+      if (ending === 't' && baseForm.length > 2) {
+        const withEn = baseForm + 'en';
+        if (translations[withEn]) {
+          return translations[withEn];
+        }
+      }
+    }
+  }
+  
+  // Special handling for common verb patterns
+  // If word ends with 't' and removing it gives a valid stem, try adding 'en'
+  if (normalized.endsWith('t') && normalized.length > 3) {
+    const stem = normalized.slice(0, -1);
+    const infinitive = stem + 'en';
+    if (translations[infinitive]) {
+      return translations[infinitive];
+    }
+  }
+  
+  // Handle verbs with umlaut changes: bleibt -> bleiben (no change), but some verbs change
+  // Try common verb stem patterns
+  const commonVerbStems = [
+    { pattern: /^(.+)t$/, add: 'en' },      // bleibt -> bleiben
+    { pattern: /^(.+)st$/, add: 'en' },    // bleibst -> bleiben
+    { pattern: /^(.+)e$/, add: 'en' },     // bleibe -> bleiben
+  ];
+  
+  for (const { pattern, add } of commonVerbStems) {
+    const match = normalized.match(pattern);
+    if (match && match[1]) {
+      const stem = match[1];
+      const infinitive = stem + add;
+      if (translations[infinitive]) {
+        return translations[infinitive];
       }
     }
   }
@@ -550,3 +848,6 @@ export async function getTranslationWithAPIFallback(
   // Return fallback if nothing found
   return fallback || `Translation for "${word}" not available`;
 }
+
+// Ensure this file is treated as a module
+export {};

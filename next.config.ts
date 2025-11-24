@@ -9,8 +9,6 @@ const nextConfig: NextConfig = {
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
-  // Ensure cheerio is handled correctly as an external package
-  serverExternalPackages: ['cheerio'],
 };
 
 export default nextConfig;

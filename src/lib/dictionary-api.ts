@@ -271,6 +271,7 @@ export interface GermanEnglishDictionaryResult {
 // Cache to track if German-English Dictionary API is blocked
 let germanEnglishApiBlocked = false;
 let germanEnglishApiBlockedUntil: number | null = null;
+let libreTranslateApiBlockedUntil: number | null = null;
 const BLOCK_DURATION = 5 * 60 * 1000; // Block for 5 minutes if 403
 
 /**
@@ -406,6 +407,12 @@ export async function getLibreTranslate(
     const normalizedWord = word.trim();
     if (!normalizedWord) return null;
 
+    // Check if API is temporarily blocked due to rate limiting
+    const BLOCK_DURATION = 5 * 60 * 1000; // 5 minutes
+    if (libreTranslateApiBlockedUntil && Date.now() < libreTranslateApiBlockedUntil) {
+      return null; // Silently skip if blocked
+    }
+
     // Use public instance or custom URL
     const baseUrl = apiUrl || 'https://libretranslate.com';
     const url = `${baseUrl}/translate`;
@@ -435,7 +442,15 @@ export async function getLibreTranslate(
       if (response.status === 400 || response.status === 404) {
         return null;
       }
-      throw new Error(`LibreTranslate API error: ${response.status}`);
+      if (response.status === 429) {
+        // Rate limit exceeded - block temporarily
+        libreTranslateApiBlockedUntil = Date.now() + BLOCK_DURATION;
+        console.warn('LibreTranslate API rate limit exceeded. Temporarily skipping for 5 minutes.');
+        return null; // Return null instead of throwing
+      }
+      // For other errors, log but don't throw - return null to allow fallback
+      console.warn(`LibreTranslate API error: ${response.status}`);
+      return null;
     }
 
     const data: LibreTranslateResponse = await response.json();
@@ -448,7 +463,7 @@ export async function getLibreTranslate(
   } catch (error) {
     // Don't log timeout errors to avoid spam
     if (error instanceof Error && error.name !== 'AbortError') {
-      console.error('Error fetching LibreTranslate translation:', error);
+      console.warn('Error fetching LibreTranslate translation:', error);
     }
     return null;
   }

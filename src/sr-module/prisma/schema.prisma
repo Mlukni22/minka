@@ -1,0 +1,70 @@
+// Prisma schema for Spaced Repetition System
+// Supports SQLite (dev) and PostgreSQL (production)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // Change to "postgresql" for production
+  url      = env("DATABASE_URL")
+}
+
+model Card {
+  id                String   @id @default(uuid())
+  front             String
+  back              String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // SRS fields
+  easeFactor        Float    @default(2.5)
+  intervalDays      Int      @default(0)
+  lastIntervalDays  Int      @default(0)
+  reps              Int      @default(0)
+  nextReview        DateTime
+  
+  // Statistics
+  totalReviews      Int      @default(0)
+  totalFails        Int      @default(0)
+  consecutiveFails  Int      @default(0)
+  
+  // Leech detection
+  isLeech           Boolean  @default(false)
+  leechNotes        String?
+  
+  // Metadata
+  tags              String?  // JSON array of tags
+  userId            String?
+  
+  // Relations
+  reviews           Review[]
+  
+  @@index([userId])
+  @@index([nextReview])
+  @@index([isLeech])
+  @@index([userId, nextReview])
+}
+
+model Review {
+  id            String   @id @default(uuid())
+  cardId        String
+  userId        String?
+  quality       Int      // 0-5 rating
+  timestamp     DateTime @default(now())
+  
+  // SRS state at time of review
+  intervalDays  Int
+  easeFactor    Float
+  reps          Int
+  
+  // Relations
+  card          Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  
+  @@index([cardId])
+  @@index([userId])
+  @@index([timestamp])
+  @@index([cardId, timestamp])
+}
+
+

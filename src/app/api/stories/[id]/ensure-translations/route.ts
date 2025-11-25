@@ -9,10 +9,12 @@ import { checkStoryTranslations } from '@/lib/translation/checkStoryTranslations
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
-    const storyId = params.id;
+    // Handle both sync and async params (Next.js 13+ compatibility)
+    const resolvedParams = await Promise.resolve(params);
+    const storyId = resolvedParams.id;
     if (!storyId) {
       return NextResponse.json(
         { error: 'Story ID is required' },
@@ -20,8 +22,17 @@ export async function POST(
       );
     }
 
-    const body = await request.json();
-    const { text, sectionId, forceRefresh = false } = body;
+    let body;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+    
+    const { text, sectionId, forceRefresh = false } = body || {};
 
     if (!text) {
       return NextResponse.json(
@@ -95,10 +106,12 @@ export async function POST(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
-    const storyId = params.id;
+    // Handle both sync and async params (Next.js 13+ compatibility)
+    const resolvedParams = await Promise.resolve(params);
+    const storyId = resolvedParams.id;
     if (!storyId) {
       return NextResponse.json(
         { error: 'Story ID is required' },

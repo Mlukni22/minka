@@ -114,6 +114,11 @@ export async function saveUserProgressionState(
  */
 export async function getUserFlashcards(userId: string): Promise<SRSVocabularyItem[]> {
   try {
+    if (!userId) {
+      console.warn('getUserFlashcards: userId is required');
+      return [];
+    }
+    
     const flashcardsRef = collection(getDb(), 'users', userId, 'flashcards');
     const snapshot = await getDocs(flashcardsRef);
     
@@ -127,8 +132,14 @@ export async function getUserFlashcards(userId: string): Promise<SRSVocabularyIt
     });
     
     return flashcards;
-  } catch (error) {
-    console.error('Error getting flashcards:', error);
+  } catch (error: any) {
+    // Check if it's a permission error
+    if (error?.code === 'permission-denied') {
+      console.warn('Permission denied getting flashcard sets. Make sure Firestore rules are deployed and user is authenticated.');
+      console.warn('User ID:', userId);
+    } else {
+      console.error('Error getting flashcard sets:', error);
+    }
     return [];
   }
 }

@@ -194,7 +194,7 @@ function TopSection({
             className="h-[28rem] w-auto"
             animate={{ scale: [1, 1.03, 1] }}
             transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-            style={{ filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.1))' }}
+            style={{ filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.1))', width: 'auto', height: '28rem' }}
           />
         </motion.div>
       </div>

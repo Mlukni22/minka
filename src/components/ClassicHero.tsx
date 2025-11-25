@@ -37,6 +37,7 @@ export default function ClassicHero() {
               height={320}
               priority
               className="w-full h-auto"
+              style={{ width: 'auto', height: 'auto' }}
               sizes="(max-width: 640px) 240px, (max-width: 768px) 300px, 360px"
             />
           </div>

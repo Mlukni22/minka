@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Bell, Globe, Moon, Save, Sun, Target, Trash2, User } from 'lucide-react';
+import { ArrowLeft, Bell, Globe, Moon, Save, Sun, Target, Trash2, User, AlertTriangle } from 'lucide-react';
 import { User as FirebaseUser } from 'firebase/auth';
+import { deleteAllUserData } from '@/lib/delete-user-data';
 
 interface SettingsPageProps {
   user: FirebaseUser | null;
@@ -46,6 +47,8 @@ export function SettingsPage({ user, onBack, onSave, onResetProgress }: Settings
   });
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
@@ -62,6 +65,28 @@ export function SettingsPage({ user, onBack, onSave, onResetProgress }: Settings
   const handleReset = () => {
     onResetProgress?.();
     setShowResetConfirm(false);
+  };
+
+  const handleDeleteAllData = async () => {
+    if (!user) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteAllUserData(user.uid);
+      alert('All your data has been successfully deleted. You will be signed out.');
+      // Sign out the user
+      const { signOut } = await import('firebase/auth');
+      const { getAuth } = await import('firebase/auth');
+      await signOut(getAuth());
+      // Reload the page to reset the app state
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error deleting user data:', error);
+      alert('Failed to delete data. Please try again or contact support.');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   return (
@@ -251,43 +276,113 @@ export function SettingsPage({ user, onBack, onSave, onResetProgress }: Settings
           className="bg-red-50 backdrop-blur rounded-3xl border-2 border-red-200 p-6 md:p-8 mb-6"
         >
           <h2 className="text-2xl font-bold text-red-800 mb-6 flex items-center gap-2">
-            <Trash2 className="h-6 w-6" />
+            <AlertTriangle className="h-6 w-6" />
             Danger Zone
           </h2>
 
-          <div className="bg-white rounded-2xl p-5">
-            <h3 className="font-bold text-red-800 mb-2">Reset All Progress</h3>
-            <p className="text-sm text-red-600 mb-4">
-              This will permanently delete all your progress, achievements, and flashcards. This action cannot be undone.
-            </p>
-            {!showResetConfirm ? (
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className="px-4 py-2 rounded-xl border-2 border-red-500 text-red-700 font-semibold hover:bg-red-50 transition-all"
-              >
-                Reset Progress
-              </button>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-red-800">
-                  Are you absolutely sure? This cannot be undone!
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleReset}
-                    className="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-all"
-                  >
-                    Yes, Reset Everything
-                  </button>
-                  <button
-                    onClick={() => setShowResetConfirm(false)}
-                    className="px-4 py-2 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-all"
-                  >
-                    Cancel
-                  </button>
+          <div className="space-y-4">
+            {/* Reset Progress */}
+            <div className="bg-white rounded-2xl p-5">
+              <h3 className="font-bold text-red-800 mb-2">Reset All Progress</h3>
+              <p className="text-sm text-red-600 mb-4">
+                This will permanently delete all your progress, achievements, and flashcards. This action cannot be undone.
+              </p>
+              {!showResetConfirm ? (
+                <button
+                  onClick={() => setShowResetConfirm(true)}
+                  className="px-4 py-2 rounded-xl border-2 border-red-500 text-red-700 font-semibold hover:bg-red-50 transition-all"
+                >
+                  Reset Progress
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold text-red-800">
+                    Are you absolutely sure? This cannot be undone!
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleReset}
+                      className="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition-all"
+                    >
+                      Yes, Reset Everything
+                    </button>
+                    <button
+                      onClick={() => setShowResetConfirm(false)}
+                      className="px-4 py-2 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+
+            {/* Delete All Account Data */}
+            <div className="bg-white rounded-2xl p-5 border-2 border-red-400">
+              <h3 className="font-bold text-red-900 mb-2 flex items-center gap-2">
+                <Trash2 className="h-5 w-5" />
+                Delete All Account Data
+              </h3>
+              <p className="text-sm text-red-700 mb-4">
+                This will permanently delete ALL your data including your account, progress, flashcards, and all associated information. This action cannot be undone and you will be signed out.
+              </p>
+              {!showDeleteConfirm ? (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 rounded-xl bg-red-700 text-white font-semibold hover:bg-red-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Delete All Data
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <div className="bg-red-100 border border-red-300 rounded-xl p-4">
+                    <p className="text-sm font-bold text-red-900 mb-2">
+                      ⚠️ Final Warning
+                    </p>
+                    <p className="text-sm text-red-800 mb-2">
+                      This will delete:
+                    </p>
+                    <ul className="text-sm text-red-700 list-disc list-inside mb-3 space-y-1">
+                      <li>Your user account</li>
+                      <li>All flashcards and review history</li>
+                      <li>All story and chapter progress</li>
+                      <li>All exercise attempts</li>
+                      <li>All achievements and statistics</li>
+                    </ul>
+                    <p className="text-sm font-semibold text-red-900">
+                      This action is PERMANENT and CANNOT be undone!
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDeleteAllData}
+                      disabled={isDeleting}
+                      className="px-4 py-2 rounded-xl bg-red-800 text-white font-semibold hover:bg-red-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {isDeleting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4" />
+                          Yes, Delete Everything
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      disabled={isDeleting}
+                      className="px-4 py-2 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold hover:bg-gray-100 transition-all disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
 

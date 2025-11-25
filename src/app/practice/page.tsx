@@ -82,28 +82,47 @@ export default function PracticePage() {
     try {
       setLoading(true);
       
-      const params = new URLSearchParams({
-        userId: uid,
-        limit: '20',
+      // Call Firestore directly from client instead of API route
+      // API routes run server-side without auth context
+      const { getFlashcardQueue, getFlashcardPreferences, getFlashcardStats } = await import('@/lib/db/flashcards');
+      
+      const preferences = await getFlashcardPreferences(uid);
+      const queue = await getFlashcardQueue(uid, {
+        storyId: selectedStoryId || undefined,
+        limit: 20,
+        maxNewCards: preferences.maxNewCardsPerDay,
+      });
+      const stats = await getFlashcardStats(uid);
+      
+      // Convert queue to card format
+      const cards = queue.map(card => {
+        // Ensure every card has an example sentence
+        let contextSentence = card.contextSentence || card.exampleSentence || '';
+        if (!contextSentence && card.frontText) {
+          // Create a simple example sentence if none exists
+          const wordWithoutArticle = card.frontText.replace(/^(der|die|das|ein|eine|dem|den|des|deren|dessen)\s+/i, '').trim() || card.frontText;
+          contextSentence = `Hier ist ${wordWithoutArticle}.`;
+        }
+        
+        return {
+          id: card.id,
+          frontText: card.frontText || card.front || '',
+          backText: card.backText || card.back || '',
+          contextSentence: contextSentence,
+          contextTranslation: card.contextTranslation,
+          storyTitle: undefined, // Will be enriched if needed
+          displayType: card.displayType,
+        };
       });
       
-      if (selectedStoryId) {
-        params.append('storyId', selectedStoryId);
-      }
+      setCards(cards);
+      setStats({
+        dueToday: stats.dueToday,
+        newToday: stats.newToday,
+        remainingInSession: Math.max(0, preferences.sessionGoalCards - cards.length),
+      });
       
-      const url = `/api/flashcards/queue?${params}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to load queue: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      setCards(data.cards || []);
-      setStats(data.stats || { dueToday: 0, newToday: 0, remainingInSession: 0 });
-      
-      if (!data.cards || data.cards.length === 0) {
+      if (!cards || cards.length === 0) {
         setSessionComplete(true);
       } else {
         setCurrentIndex(0);
@@ -133,41 +152,51 @@ export default function PracticePage() {
     // Immediately advance to next card
     (async () => {
       try {
-        const response = await fetch('/api/flashcards/review', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            flashcardId: card.id,
-            rating,
-            cardType: card.displayType,
-            userAnswer: userAnswer,
-            isCorrect: validation.isCorrect,
-          }),
-        });
-
-        if (!response.ok) throw new Error('Failed to save review');
+        // Call Firestore directly from client instead of API route
+        const { getFlashcardSRS, saveFlashcardReview } = await import('@/lib/db/flashcards');
+        
+        // Get current SRS data
+        const previousSRS = await getFlashcardSRS(userId, card.id);
+        if (!previousSRS) {
+          throw new Error('Flashcard not found');
+        }
+        
+        // Save review and update SRS
+        await saveFlashcardReview(
+          userId,
+          card.id,
+          rating,
+          previousSRS,
+          card.displayType as 'A' | 'B',
+          userAnswer,
+          validation.isCorrect
+        );
 
         setCardsReviewed(cardsReviewed + 1);
 
-        // Reset Type B state
-        setUserAnswer('');
-        setShowHint(false);
-        setValidationResult(null);
-        setShowResult(false);
+        // Wait before advancing - 1 second for both correct and incorrect
+        const delay = 1000; // 1 second for both
+        
+        setTimeout(() => {
+          // Reset Type B state
+          setUserAnswer('');
+          setShowHint(false);
+          setValidationResult(null);
+          setShowResult(false);
 
-        // Move to next card
-        const nextIndex = currentIndex + 1;
-        if (nextIndex >= cards.length) {
-          setSessionComplete(true);
-        } else {
-          setCurrentIndex(nextIndex);
-          setShowAnswer(false);
-          // Focus input for Type B
-          if (cards[nextIndex]?.displayType === 'B') {
-            setTimeout(() => inputRef.current?.focus(), 100);
+          // Move to next card
+          const nextIndex = currentIndex + 1;
+          if (nextIndex >= cards.length) {
+            setSessionComplete(true);
+          } else {
+            setCurrentIndex(nextIndex);
+            setShowAnswer(false);
+            // Focus input for Type B
+            if (cards[nextIndex]?.displayType === 'B') {
+              setTimeout(() => inputRef.current?.focus(), 100);
+            }
           }
-        }
+        }, delay);
       } catch (error) {
         console.error('Error reviewing flashcard:', error);
         alert('Failed to save review. Please try again.');
@@ -189,20 +218,26 @@ export default function PracticePage() {
     }
 
     try {
-      const response = await fetch('/api/flashcards/review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          flashcardId: card.id,
-          rating,
-          cardType: card.displayType,
-          userAnswer: userAnswerValue,
-          isCorrect: isCorrectValue,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to save review');
+      // Call Firestore directly from client instead of API route
+      // API routes run server-side without auth context
+      const { getFlashcardSRS, saveFlashcardReview } = await import('@/lib/db/flashcards');
+      
+      // Get current SRS data
+      const previousSRS = await getFlashcardSRS(userId, card.id);
+      if (!previousSRS) {
+        throw new Error('Flashcard not found');
+      }
+      
+      // Save review and update SRS
+      await saveFlashcardReview(
+        userId,
+        card.id,
+        rating,
+        previousSRS,
+        card.displayType as 'A' | 'B',
+        userAnswerValue,
+        isCorrectValue
+      );
 
       setCardsReviewed(cardsReviewed + 1);
 
@@ -587,24 +622,25 @@ export default function PracticePage() {
                 <h2 className="text-xl font-semibold text-gray-900 mb-6">Type the missing word</h2>
                 
                 {/* Cloze Sentence - Always visible, one continuous line */}
-                {currentCard.contextSentence && currentCard.contextSentence.trim() && (
-                  <div className="mb-6 w-full">
-                    <div className="text-sm text-gray-500 mb-3 font-medium">Complete the sentence:</div>
-                    <div className="p-5 bg-gray-50 rounded-lg border border-gray-200 overflow-x-auto">
-                      <div 
-                        className="text-2xl text-gray-800 font-medium"
-                        style={{ 
-                          whiteSpace: 'nowrap',
-                          display: 'block',
-                          overflow: 'visible',
-                          fontFamily: 'var(--font-inter), system-ui, sans-serif'
-                        }}
-                      >
-                        {createClozeSentence(currentCard.contextSentence, currentCard.frontText || '')}
-                      </div>
+                {/* Always show cloze sentence section, even if contextSentence is empty */}
+                <div className="mb-6 w-full">
+                  <div className="text-sm text-gray-500 mb-3 font-medium">Complete the sentence:</div>
+                  <div className="p-5 bg-gray-50 rounded-lg border border-gray-200 overflow-x-auto">
+                    <div 
+                      className="text-2xl text-gray-800 font-medium"
+                      style={{ 
+                        whiteSpace: 'nowrap',
+                        display: 'block',
+                        overflow: 'visible',
+                        fontFamily: 'var(--font-inter), system-ui, sans-serif'
+                      }}
+                    >
+                      {currentCard.contextSentence && currentCard.contextSentence.trim()
+                        ? createClozeSentence(currentCard.contextSentence, currentCard.frontText || '')
+                        : createClozeSentence('', currentCard.frontText || '')}
                     </div>
                   </div>
-                )}
+                </div>
 
                 {/* Meaning */}
                 <div className="mb-6">

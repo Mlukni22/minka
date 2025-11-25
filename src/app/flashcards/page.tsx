@@ -342,14 +342,35 @@ function saveCards(cards: Card[]) {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   Session builder: due + new
+   Session builder: prioritize newly clicked words → due cards → other new
    ──────────────────────────────────────────────────────────────────────── */
 function buildQueue(cards: Card[], dailyNew = 8, dueLimit = 40): Card[] {
   const now = Date.now();
+  
+  // 1. NEWLY CLICKED WORDS (just added, never reviewed) - HIGHEST PRIORITY
+  // These are cards that are new (never reviewed) and due now (or very recently)
+  // Newly clicked words have: new=true, reps=0, next <= now (or within last 2 hours)
+  const twoHoursAgo = now - (2 * 60 * 60 * 1000);
+  const newlyClicked = cards.filter(c => 
+    c.new && 
+    c.reps === 0 &&
+    c.next <= now &&
+    c.next >= twoHoursAgo // Created within last 2 hours
+  );
+  
+  // 2. DUE CARDS (scheduled reviews) - SECOND PRIORITY
   const due = cards.filter(c => c.next <= now && !c.new).slice(0, dueLimit);
-  const remaining = dailyNew - due.length;
-  const unseen = cards.filter(c => c.new).slice(0, remaining < 0 ? 0 : remaining);
-  return [...due, ...unseen];
+  
+  // 3. OTHER NEW CARDS (if any remaining slots)
+  const usedSlots = newlyClicked.length + due.length;
+  const remaining = dailyNew - usedSlots;
+  const otherNew = cards.filter(c => 
+    c.new && 
+    !newlyClicked.includes(c)
+  ).slice(0, remaining < 0 ? 0 : remaining);
+  
+  // Return: newly clicked first, then due, then other new
+  return [...newlyClicked, ...due, ...otherNew];
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -375,20 +396,170 @@ export default function FlashcardsPage() {
 
   // Load cards after component mounts (client-side only)
   useEffect(() => {
-    const loadedCards = loadCards() ?? [];
-    setCards(loadedCards);
-    setQueue(buildQueue(loadedCards));
-    setIsLoading(false);
+    async function loadAllCards() {
+      try {
+        // Wait for auth to be ready
+        const { getAuth, onAuthStateChanged } = await import('firebase/auth');
+        const { getUserFlashcards } = await import('@/lib/db/flashcards');
+        const { getFlashcardSRS } = await import('@/lib/db/flashcards');
+        const auth = getAuth();
+        
+        // Wait for auth state to be determined
+        const currentUser = await new Promise((resolve) => {
+          const unsubscribe = onAuthStateChanged(auth, (user) => {
+            unsubscribe();
+            resolve(user);
+          });
+          // If auth is already ready, resolve immediately
+          if (auth.currentUser) {
+            unsubscribe();
+            resolve(auth.currentUser);
+          }
+        });
+        
+        let allCards: Card[] = [];
+        
+        if (currentUser) {
+          try {
+            // Load from Firestore
+            console.log('[Flashcard Page] Loading flashcards for user:', currentUser.uid);
+            const firestoreCards = await getUserFlashcards(currentUser.uid);
+            console.log('[Flashcard Page] Loaded', firestoreCards.length, 'flashcards from Firestore');
+            
+            for (const fc of firestoreCards) {
+              try {
+                // Skip inactive cards
+                if (fc.isActive === false) continue;
+                
+                // Validate flashcard has required text
+                const frontText = (fc.frontText || fc.front || '').toString().trim();
+                const backText = (fc.backText || fc.back || '').toString().trim();
+                if (!frontText || !backText) {
+                  console.warn(`Skipping flashcard ${fc.id} - missing frontText or backText`);
+                  continue;
+                }
+                
+                let srs = await getFlashcardSRS(auth.currentUser!.uid, fc.id);
+                
+                // Create default SRS if missing (for backward compatibility)
+                if (!srs) {
+                  try {
+                    const { getDefaultSRS } = await import('@/lib/srs-scheduler');
+                    const { doc, setDoc, Timestamp } = await import('firebase/firestore');
+                    const { db } = await import('@/lib/firebase');
+                    const defaultSRS = getDefaultSRS();
+                    const srsRef = doc(db, 'users', auth.currentUser!.uid, 'flashcards', fc.id, 'srs', 'data');
+                    await setDoc(srsRef, {
+                      flashcardId: fc.id,
+                      dueAt: Timestamp.fromDate(defaultSRS.dueAt),
+                      intervalDays: defaultSRS.intervalDays,
+                      easeFactor: defaultSRS.easeFactor,
+                      repetitions: defaultSRS.repetitions,
+                      lastReviewedAt: null,
+                      lastTypeAAt: null,
+                      lastTypeBAt: null,
+                    });
+                    srs = await getFlashcardSRS(auth.currentUser!.uid, fc.id);
+                  } catch (srsErr) {
+                    console.warn(`Failed to create SRS for flashcard ${fc.id}:`, srsErr);
+                  }
+                }
+                
+                const now = Date.now();
+                const dueAt = srs?.dueAt?.toDate()?.getTime() || now;
+                const isNew = (srs?.repetitions || 0) === 0;
+                const contextSentence = (fc.contextSentence || fc.exampleSentence || '').toString().trim();
+                
+                // Convert Firestore flashcard to Card format (2 cards: de-en and en-de)
+                // German → English
+                allCards.push({
+                  id: `${fc.id}:de-en`,
+                  wordId: fc.id,
+                  dir: "de-en",
+                  prompt: frontText,
+                  answer: backText,
+                  cloze: contextSentence ? cloze(contextSentence, frontText) : '',
+                  next: dueAt,
+                  interval: srs?.intervalDays || 0,
+                  ease: srs?.easeFactor || 2.5,
+                  reps: srs?.repetitions || 0,
+                  lapses: 0,
+                  new: isNew,
+                });
+                
+                // English → German
+                allCards.push({
+                  id: `${fc.id}:en-de`,
+                  wordId: fc.id,
+                  dir: "en-de",
+                  prompt: backText,
+                  answer: frontText,
+                  cloze: contextSentence ? cloze(contextSentence, frontText) : '',
+                  next: dueAt,
+                  interval: srs?.intervalDays || 0,
+                  ease: srs?.easeFactor || 2.5,
+                  reps: srs?.repetitions || 0,
+                  lapses: 0,
+                  new: isNew,
+                });
+              } catch (err) {
+                console.warn('Error loading flashcard:', fc.id, err);
+                // Continue with next card instead of breaking
+              }
+            }
+          } catch (err) {
+            console.warn('Error loading from Firestore, falling back to localStorage:', err);
+          }
+        }
+        
+        // Fallback to localStorage if Firestore didn't work or user not logged in
+        if (allCards.length === 0) {
+          console.log('[Flashcard Page] No Firestore cards, trying localStorage...');
+          const localCards = loadCards() ?? [];
+          console.log('[Flashcard Page] Loaded', localCards.length, 'cards from localStorage');
+          allCards = localCards;
+        }
+        
+        console.log('[Flashcard Page] Total cards loaded:', allCards.length);
+        console.log('[Flashcard Page] Building queue...');
+        const queue = buildQueue(allCards);
+        console.log('[Flashcard Page] Queue built with', queue.length, 'cards');
+        
+        setCards(allCards);
+        setQueue(queue);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error loading flashcards:', error);
+        // Fallback to localStorage
+        const loadedCards = loadCards() ?? [];
+        setCards(loadedCards);
+        setQueue(buildQueue(loadedCards));
+        setIsLoading(false);
+      }
+    }
+    
+    loadAllCards();
   }, []);
 
   // recompute queue if deck changed
   useEffect(() => { 
     if (cards.length > 0) {
-      saveCards(cards); 
+      saveCards(cards);
+      // Also sync to Firestore if user is logged in
+      syncCardsToFirestore(cards).catch(err => {
+        console.warn('Failed to sync cards to Firestore:', err);
+      });
       setQueue(buildQueue(cards)); 
       setIdx(0);
     }
   }, [cards.length]);
+  
+  // Helper function to sync cards to Firestore (called when cards are updated)
+  async function syncCardsToFirestore(cardsToSync: Card[]) {
+    // Cards are saved to localStorage immediately
+    // Firestore sync happens when user reviews cards (via reviewFlashcard function)
+    // This is just a placeholder for future sync if needed
+  }
   
   const stats = useMemo(() => {
     const now = Date.now();

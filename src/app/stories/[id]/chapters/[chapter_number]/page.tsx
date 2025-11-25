@@ -114,7 +114,11 @@ export default function ChapterReaderPage() {
               forceRefresh: false,
             }),
           }).catch(error => {
-            console.error('Background pre-translation failed (non-critical):', error);
+            // Silently fail - this is a background optimization, not critical
+            // Only log in development
+            if (process.env.NODE_ENV === 'development') {
+              console.debug('Background pre-translation failed (non-critical):', error);
+            }
           });
         }
       }
@@ -145,17 +149,6 @@ export default function ChapterReaderPage() {
         setAddedToFlashcards(existingFlashcards);
       }
       
-      // Debug: Log words with images
-      console.log('=== WORDS DEBUG ===');
-      console.log('Total words loaded:', wordsData.length);
-      wordsData.forEach(word => {
-        if (word.imageUrl) {
-          console.log('✅ Word with image:', word.phrase, 'Image URL:', word.imageUrl);
-        } else {
-          console.log('❌ Word without image:', word.phrase, 'Full word data:', word);
-        }
-      });
-      console.log('==================');
 
 
       // Mark chapter as READING if not started

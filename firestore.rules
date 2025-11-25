@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the resource
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Dictionary cache - allow read/write for authenticated users
+    match /dictionaryCache/{word} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Stories - allow read for all, write for authenticated
+    match /stories/{storyId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+      
+      match /tokens/{tokenId} {
+        allow read, write: if isAuthenticated();
+      }
+      
+      match /chapters/{chapterId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+        
+        match /blocks/{blockId} {
+          allow read: if true;
+          allow write: if isAuthenticated();
+        }
+        
+        match /words/{wordId} {
+          allow read: if true;
+          allow write: if isAuthenticated();
+        }
+        
+        match /exercises/{exerciseId} {
+          allow read: if true;
+          allow write: if isAuthenticated();
+          
+          match /options/{optionId} {
+            allow read: if true;
+            allow write: if isAuthenticated();
+          }
+        }
+      }
+      
+      match /sections/{sectionId} {
+        allow read: if true;
+        allow write: if isAuthenticated();
+      }
+    }
+    
+    // Story words collection
+    match /story_words/{wordId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // User documents - users can only access their own data
+    match /users/{userId} {
+      // User document itself
+      allow read, write: if isOwner(userId);
+      
+      // User flashcards - SIMPLIFIED: Allow if authenticated and userId matches
+      match /flashcards/{flashcardId} {
+        // For list queries (getDocs), Firestore checks each document
+        // The userId in the parent path must match the authenticated user
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
+        
+        // Flashcard SRS data
+        match /srs/{document=**} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+        
+        // Flashcard reviews
+        match /reviews/{reviewId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+      
+      // User flashcard preferences
+      match /flashcardPreferences/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // User story progress
+      match /storyProgress/{storyId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // User chapter progress
+      match /chapterProgress/{chapterId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // User exercise attempts
+      match /exerciseAttempts/{attemptId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Legacy progressions collection
+    match /progressions/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

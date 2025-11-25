@@ -25,6 +25,7 @@ import { LevelDisplay, XPNotification, LevelUpNotification } from '@/components/
 import { DailyQuests, QuestCompletionNotification } from '@/components/daily-quests';
 import { StreakWidget } from '@/components/streak-widget';
 import { HeatmapCalendar } from '@/components/heatmap-calendar';
+import { ReviewForecast } from '@/components/review-forecast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { UserProgressionState, ProgressionSystem } from '@/lib/progression';
 import { LevelSystem } from '@/lib/level-system';
@@ -76,6 +77,39 @@ export function Dashboard({
     }
   };
 
+  // State for review forecast
+  const [reviewForecast, setReviewForecast] = useState<{
+    today: Array<{ hour: number; count: number; cumulative: number }>;
+    week: Array<{ date: Date; count: number; cumulative: number }>;
+    cardsDueNow: number;
+  } | null>(null);
+
+  // Load review forecast
+  useEffect(() => {
+    if (!user?.uid) return;
+    
+    async function loadForecast() {
+      try {
+        const { getReviewForecast } = await import('@/lib/db/flashcards');
+        const forecast = await getReviewForecast(user.uid);
+        // Convert Firestore Timestamps to Dates if needed
+        const processedForecast = {
+          ...forecast,
+          week: forecast.week.map(day => ({
+            ...day,
+            date: day.date instanceof Date ? day.date : (day.date?.toDate?.() || new Date(day.date)),
+            hours: day.hours || [],
+          })),
+        };
+        setReviewForecast(processedForecast);
+      } catch (error) {
+        console.error('Error loading review forecast:', error);
+      }
+    }
+    
+    loadForecast();
+  }, [user?.uid]);
+
   // Calculate stats
   const stats = React.useMemo(() => {
     if (!progressionState) return null;
@@ -100,6 +134,7 @@ export function Dashboard({
       flashcardStats
     };
   }, [progressionState]);
+
 
   if (!user || !progressionState || !stats) {
     return (
@@ -136,6 +171,24 @@ export function Dashboard({
             <LevelDisplay compact />
           </div>
         </motion.div>
+
+        {/* Review Forecast Section - Full Width */}
+        {reviewForecast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-6"
+          >
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Clock className="h-6 w-6" />
+                Review Forecast
+              </h2>
+              <ReviewForecast forecast={reviewForecast} />
+            </div>
+          </motion.div>
+        )}
 
         {/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

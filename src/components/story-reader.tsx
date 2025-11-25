@@ -409,10 +409,6 @@ export function StoryReader({
         const isInFlashcards = FlashcardSystem.isWordInFlashcards(cleanToken);
         const displayText = vocabItem.german;
         
-        // Get image path for the word
-        const imagePath = vocabItem.german.toLowerCase().replace(/\s+/g, '-');
-        const imageUrl = `/images/vocabulary/${imagePath}.png`;
-        
         result.push(
           <span 
             key={`vocab-${cleanToken}-${index}`}
@@ -427,15 +423,6 @@ export function StoryReader({
                 {vocabItem.article && (
                   <span className="text-xs font-bold text-purple-600">{vocabItem.article}</span>
                 )}
-                <img 
-                  src={imageUrl} 
-                  alt={vocabItem.german}
-                  className="w-12 h-12 object-cover rounded-lg border-2 border-purple-300"
-                  onError={(e) => { 
-                    // Hide image if it doesn't exist
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
               </div>
               <div className="mt-2 font-semibold">{vocabItem.english}</div>
               {vocabItem.plural && (

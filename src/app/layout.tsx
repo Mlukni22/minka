@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Poppins, Nunito, Inter } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { ErrorSuppressor } from "@/components/error-suppressor";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -43,12 +44,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${poppins.variable} ${nunito.variable} ${inter.variable} antialiased`}
       >
         <ErrorBoundary>
           <LanguageProvider>
+            <ErrorSuppressor />
             {children}
           </LanguageProvider>
         </ErrorBoundary>

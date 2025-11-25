@@ -14,17 +14,74 @@ const getDb = () => {
  */
 export async function getUserFlashcards(userId: string): Promise<Flashcard[]> {
   try {
+    if (!userId) {
+      console.warn('[Flashcard DB] getUserFlashcards: userId is required');
+      return [];
+    }
+    
+    // Verify authentication
+    const { getAuth } = await import('firebase/auth');
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+    
+    console.log('[Flashcard DB] Getting flashcards for user:', userId);
+    console.log('[Flashcard DB] Current authenticated user:', currentUser?.uid || 'NOT AUTHENTICATED');
+    console.log('[Flashcard DB] User IDs match:', currentUser?.uid === userId);
+    
+    if (!currentUser) {
+      console.error('[Flashcard DB] User is not authenticated! Cannot access flashcards.');
+      return [];
+    }
+    
+    if (currentUser.uid !== userId) {
+      console.error('[Flashcard DB] User ID mismatch! Requested:', userId, 'Authenticated:', currentUser.uid);
+      return [];
+    }
+    
     const flashcardsRef = collection(getDb(), 'users', userId, 'flashcards');
+    console.log('[Flashcard DB] Collection path: users/', userId, '/flashcards');
     const snapshot = await getDocs(flashcardsRef);
     
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-    })) as Flashcard[];
-  } catch (error) {
-    console.error('Error getting user flashcards:', error);
+    console.log('[Flashcard DB] Found', snapshot.size, 'flashcard documents');
+    
+    const flashcards = snapshot.docs.map(doc => {
+      const data = doc.data();
+      
+      // Ensure every flashcard has an example sentence
+      let contextSentence = (data.contextSentence || data.exampleSentence || '').toString().trim();
+      const frontText = (data.frontText || data.front || '').toString().trim();
+      if (!contextSentence && frontText) {
+        // Create a simple example sentence if none exists
+        const wordWithoutArticle = frontText.replace(/^(der|die|das|ein|eine|dem|den|des|deren|dessen)\s+/i, '').trim() || frontText;
+        contextSentence = `Hier ist ${wordWithoutArticle}.`;
+      }
+      
+      console.log('[Flashcard DB] Flashcard:', doc.id, {
+        frontText: frontText || '(empty)',
+        backText: data.backText || data.back || '(empty)',
+        contextSentence: contextSentence || '(empty)',
+        isActive: data.isActive,
+      });
+      return {
+        id: doc.id,
+        ...data,
+        contextSentence: contextSentence,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+      } as Flashcard;
+    });
+    
+    console.log('[Flashcard DB] Returning', flashcards.length, 'flashcards');
+    return flashcards;
+  } catch (error: any) {
+    // Check if it's a permission error
+    if (error?.code === 'permission-denied') {
+      console.error('[Flashcard DB] Permission denied getting flashcards. Make sure Firestore rules are deployed and user is authenticated.');
+      console.error('[Flashcard DB] User ID:', userId);
+      console.error('[Flashcard DB] Error details:', error);
+    } else {
+      console.error('[Flashcard DB] Error getting user flashcards:', error);
+    }
     return [];
   }
 }
@@ -236,12 +293,48 @@ export async function createFlashcardWithContext(
       throw new Error(`Cannot create flashcard with empty frontText or backText. frontText: "${trimmedFrontText}", backText: "${trimmedBackText}"`);
     }
     
+    // Helper function to create a simple example sentence if none exists
+    const createExampleSentence = (word: string, translation: string): string => {
+      // Remove article if present
+      const wordWithoutArticle = word.replace(/^(der|die|das|ein|eine|dem|den|des|deren|dessen)\s+/i, '').trim() || word;
+      // Create a simple sentence: "Das Wort ist [word]." or "Hier ist [word]."
+      return `Hier ist ${wordWithoutArticle}.`;
+    };
+    
+    // Ensure contextSentence contains the frontText (the clicked word)
+    // If contextSentence doesn't contain frontText, create a proper example sentence
+    let contextSentence = (data.contextSentence || '').toString().trim();
+    
+    // If no context sentence provided, create one
+    if (!contextSentence) {
+      contextSentence = createExampleSentence(trimmedFrontText, trimmedBackText);
+      console.log('[Flashcard DB] No context sentence provided, created example:', contextSentence);
+    }
+    
+    // Check if contextSentence contains the frontText (case-insensitive)
+    const frontTextLower = trimmedFrontText.toLowerCase();
+    const contextLower = contextSentence.toLowerCase();
+    
+    // Try to find the word with word boundaries (more accurate than simple includes)
+    const escapedWord = frontTextLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const wordBoundaryRegex = new RegExp(`\\b${escapedWord}\\b`, 'i');
+    const wordFound = wordBoundaryRegex.test(contextSentence);
+    
+    if (!wordFound) {
+      // Word not found in sentence - create a proper example sentence
+      console.warn('[Flashcard DB] Clicked word not found in context sentence, creating example:', {
+        frontText: trimmedFrontText,
+        contextSentence: contextSentence,
+      });
+      contextSentence = createExampleSentence(trimmedFrontText, trimmedBackText);
+    }
+    
     const flashcardData: any = {
       userId,
       languageCode: data.languageCode || 'de',
       frontText: trimmedFrontText,
       backText: trimmedBackText,
-      contextSentence: (data.contextSentence || '').toString().trim() || trimmedFrontText,
+      contextSentence: contextSentence,
       isActive: true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -274,9 +367,19 @@ export async function createFlashcardWithContext(
     
     try {
       await setDoc(newFlashcardRef, flashcardData);
-      console.log('[Flashcard DB] Successfully created flashcard:', newFlashcardRef.id);
-    } catch (error) {
-      console.error('[Flashcard DB] Error saving flashcard to Firestore:', error, {
+      console.log('[Flashcard DB] ✅ Successfully created flashcard:', newFlashcardRef.id);
+      console.log('[Flashcard DB] Flashcard data:', {
+        frontText: flashcardData.frontText,
+        backText: flashcardData.backText,
+        isActive: flashcardData.isActive,
+      });
+    } catch (error: any) {
+      console.error('[Flashcard DB] ❌ Error saving flashcard to Firestore:', error);
+      if (error?.code === 'permission-denied') {
+        console.error('[Flashcard DB] Permission denied! Make sure Firestore rules are deployed.');
+        console.error('[Flashcard DB] User ID:', userId);
+      }
+      console.error('[Flashcard DB] Flashcard data that failed:', {
         flashcardData,
         docId: newFlashcardRef.id,
       });
@@ -284,18 +387,27 @@ export async function createFlashcardWithContext(
     }
     
     // Create default SRS data
-    const defaultSRS = getDefaultSRS();
-    const srsRef = doc(getDb(), 'users', userId, 'flashcards', newFlashcardRef.id, 'srs', 'data');
-    await setDoc(srsRef, {
-      flashcardId: newFlashcardRef.id,
-      dueAt: Timestamp.fromDate(defaultSRS.dueAt),
-      intervalDays: defaultSRS.intervalDays,
-      easeFactor: defaultSRS.easeFactor,
-      repetitions: defaultSRS.repetitions,
-      lastReviewedAt: null,
-      lastTypeAAt: null,
-      lastTypeBAt: null,
-    });
+    try {
+      const defaultSRS = getDefaultSRS();
+      const srsRef = doc(getDb(), 'users', userId, 'flashcards', newFlashcardRef.id, 'srs', 'data');
+      await setDoc(srsRef, {
+        flashcardId: newFlashcardRef.id,
+        dueAt: Timestamp.fromDate(defaultSRS.dueAt),
+        intervalDays: defaultSRS.intervalDays,
+        easeFactor: defaultSRS.easeFactor,
+        repetitions: defaultSRS.repetitions,
+        lastReviewedAt: null,
+        lastTypeAAt: null,
+        lastTypeBAt: null,
+      });
+      console.log('[Flashcard DB] ✅ Successfully created SRS data for flashcard:', newFlashcardRef.id);
+    } catch (srsError: any) {
+      console.error('[Flashcard DB] ❌ Error creating SRS data:', srsError);
+      if (srsError?.code === 'permission-denied') {
+        console.error('[Flashcard DB] Permission denied creating SRS! Make sure Firestore rules are deployed.');
+      }
+      // Don't throw - flashcard was created, SRS can be created later
+    }
     
     return newFlashcardRef.id;
   } catch (error) {
@@ -381,25 +493,39 @@ export async function flashcardExists(
  * Determine which display type to use for a flashcard
  */
 function determineDisplayType(srs: FlashcardSRS): 'A' | 'B' {
-  // New cards (repetitions = 0) always start with Type A
-  if (srs.repetitions === 0) {
+  // Get timestamps - they should already be Date objects from getFlashcardSRS
+  const lastTypeAAt = srs.lastTypeAAt;
+  const lastTypeBAt = srs.lastTypeBAt;
+  
+  // If card has never been reviewed (no timestamps), it's a new card - start with Type A
+  if (!lastTypeAAt && !lastTypeBAt) {
     return 'A';
   }
   
-  // Alternate between Type A and Type B
-  // If lastTypeBAt is null or much older than lastTypeAAt, use Type B
-  // Otherwise use Type A
-  if (!srs.lastTypeBAt || !srs.lastTypeAAt) {
-    return srs.lastTypeBAt ? 'A' : 'B';
+  // Card has been reviewed - alternate based on which type was used last
+  // If only lastTypeAAt exists (reviewed as Type A but not Type B yet), use Type B
+  if (lastTypeAAt && !lastTypeBAt) {
+    return 'B';
   }
   
-  // If Type B was used more recently, use Type A
-  if (srs.lastTypeBAt > srs.lastTypeAAt) {
+  // If only lastTypeBAt exists (shouldn't happen normally, but handle it), use Type A
+  if (lastTypeBAt && !lastTypeAAt) {
     return 'A';
   }
   
-  // Otherwise use Type B
-  return 'B';
+  // Both timestamps exist - alternate based on which was used more recently
+  // Compare as Date objects (they should already be Date objects from getFlashcardSRS)
+  if (lastTypeBAt && lastTypeAAt) {
+    // If Type B was used more recently, show Type A next
+    if (lastTypeBAt > lastTypeAAt) {
+      return 'A';
+    }
+    // If Type A was used more recently (or they're equal), show Type B next
+    return 'B';
+  }
+  
+  // Fallback (shouldn't reach here)
+  return 'A';
 }
 
 /**
@@ -414,6 +540,27 @@ export async function getFlashcardQueue(
   } = {}
 ): Promise<Array<Flashcard & { displayType: 'A' | 'B'; srs: FlashcardSRS }>> {
   try {
+    if (!userId) {
+      console.warn('[Flashcard DB] getFlashcardQueue: userId is required');
+      return [];
+    }
+    
+    // Verify authentication (only works client-side)
+    try {
+      const { getAuth } = await import('firebase/auth');
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+      
+      if (currentUser && currentUser.uid !== userId) {
+        console.error('[Flashcard DB] User ID mismatch in getFlashcardQueue. Requested:', userId, 'Authenticated:', currentUser.uid);
+        return [];
+      }
+    } catch (authError) {
+      // If auth check fails (e.g., server-side), continue anyway
+      // Server-side calls will fail at Firestore level if rules don't allow
+      console.warn('[Flashcard DB] Could not verify auth (might be server-side):', authError);
+    }
+    
     const { storyId, limit = 20, maxNewCards = 15 } = options;
     const now = new Date();
     
@@ -425,7 +572,9 @@ export async function getFlashcardQueue(
       q = query(flashcardsRef, where('storyId', '==', storyId));
     }
     
+    console.log('[Flashcard DB] Querying flashcards for user:', userId);
     const snapshot = await getDocs(q);
+    console.log('[Flashcard DB] Found', snapshot.size, 'flashcard documents in query');
     const cardsWithSRS: Array<{ card: Flashcard; srs: FlashcardSRS }> = [];
     
     // Get SRS data for each flashcard
@@ -471,7 +620,19 @@ export async function getFlashcardQueue(
       // Extract text fields with proper fallbacks
       const frontText = (data.frontText || data.front || '').toString().trim();
       const backText = (data.backText || data.back || '').toString().trim();
-      const contextSentence = (data.contextSentence || data.exampleSentence || '').toString().trim();
+      let contextSentence = (data.contextSentence || data.exampleSentence || '').toString().trim();
+      
+      // Ensure every flashcard has an example sentence
+      if (!contextSentence && frontText) {
+        // Create a simple example sentence if none exists
+        const wordWithoutArticle = frontText.replace(/^(der|die|das|ein|eine|dem|den|des|deren|dessen)\s+/i, '').trim() || frontText;
+        contextSentence = `Hier ist ${wordWithoutArticle}.`;
+        console.log('[Flashcard DB] Added missing example sentence for flashcard:', {
+          id: docSnap.id,
+          frontText,
+          contextSentence,
+        });
+      }
       
       // Debug: Log raw Firestore data if empty
       if (!frontText || !backText) {
@@ -531,6 +692,18 @@ export async function getFlashcardQueue(
       // Determine display type
       const displayType = determineDisplayType(srs);
       
+      // Debug logging for cards (only log if there's an issue)
+      // Only log if card should be Type B but isn't, or if timestamps suggest it should alternate
+      if (card.frontText && srs.lastTypeAAt && !srs.lastTypeBAt && displayType !== 'B') {
+        console.warn('[Flashcard Queue] Card should be Type B but got Type A:', {
+          frontText: card.frontText,
+          displayType,
+          repetitions: srs.repetitions,
+          lastTypeAAt: srs.lastTypeAAt,
+          lastTypeBAt: srs.lastTypeBAt,
+        });
+      }
+      
       const cardWithType = {
         ...card,
         displayType,
@@ -549,8 +722,14 @@ export async function getFlashcardQueue(
     const queue = [...dueCards, ...selectedNewCards].slice(0, limit);
     
     return queue;
-  } catch (error) {
-    console.error('Error getting flashcard queue:', error);
+  } catch (error: any) {
+    // Check if it's a permission error
+    if (error?.code === 'permission-denied') {
+      console.warn('Permission denied getting flashcard queue. Make sure Firestore rules are deployed and user is authenticated.');
+    } else {
+      console.error('Error getting flashcard queue:', error);
+    }
+    // Return empty array instead of throwing
     return [];
   }
 }
@@ -645,6 +824,167 @@ export async function saveFlashcardReview(
 }
 
 /**
+ * Get detailed review forecast grouped by date and hour
+ */
+export async function getReviewForecast(userId: string): Promise<{
+  today: Array<{ hour: number; count: number; cumulative: number }>;
+  week: Array<{ 
+    date: Date; 
+    count: number; 
+    cumulative: number;
+    hours: Array<{ hour: number; count: number; cumulative: number }>;
+  }>;
+  cardsDueNow: number;
+}> {
+  try {
+    if (!userId) {
+      return { today: [], week: [], cardsDueNow: 0 };
+    }
+    
+    const flashcardsRef = collection(getDb(), 'users', userId, 'flashcards');
+    const snapshot = await getDocs(flashcardsRef);
+    
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekEnd = new Date(today);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    
+    // Group reviews by date and hour
+    const reviewsByDateHour: Map<string, number> = new Map();
+    let cardsDueNow = 0;
+    
+    for (const docSnap of snapshot.docs) {
+      try {
+        const data = docSnap.data();
+        
+        // Skip inactive cards
+        if (data.isActive === false) continue;
+        
+        const srs = await getFlashcardSRS(userId, docSnap.id);
+        if (!srs) continue;
+        
+        const dueAt = srs.dueAt instanceof Date ? srs.dueAt : srs.dueAt.toDate();
+        
+        // Count cards due now
+        if (dueAt <= now) {
+          cardsDueNow++;
+        }
+        
+        // Only include future reviews within the week
+        if (dueAt > now && dueAt < weekEnd) {
+          const dateKey = `${dueAt.getFullYear()}-${dueAt.getMonth()}-${dueAt.getDate()}-${dueAt.getHours()}`;
+          reviewsByDateHour.set(dateKey, (reviewsByDateHour.get(dateKey) || 0) + 1);
+        }
+      } catch (error) {
+        console.error(`Error processing flashcard ${docSnap.id} for forecast:`, error);
+        continue;
+      }
+    }
+    
+    // Build today's hourly breakdown
+    const todayHours: Array<{ hour: number; count: number; cumulative: number }> = [];
+    let todayCumulative = cardsDueNow;
+    
+    // Start from current hour
+    const currentHour = now.getHours();
+    for (let hour = currentHour; hour < 24; hour++) {
+      const dateKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}-${hour}`;
+      const count = reviewsByDateHour.get(dateKey) || 0;
+      if (hour === currentHour) {
+        // For current hour, cumulative starts with cards due now
+        todayCumulative = cardsDueNow + count;
+      } else {
+        todayCumulative += count;
+      }
+      todayHours.push({ hour, count, cumulative: todayCumulative });
+    }
+    
+    // Build week's daily breakdown with hourly data
+    const weekDays: Array<{ 
+      date: Date; 
+      count: number; 
+      cumulative: number;
+      hours: Array<{ hour: number; count: number; cumulative: number }>;
+    }> = [];
+    let weekCumulative = cardsDueNow;
+    
+    for (let day = 0; day < 7; day++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() + day);
+      
+      let dayCount = 0;
+      const dayHours: Array<{ hour: number; count: number; cumulative: number }> = [];
+      
+      // For today, start cumulative from cardsDueNow, for other days start from previous day's cumulative
+      let dayStartCumulative = day === 0 ? cardsDueNow : weekCumulative;
+      let dayCumulative = dayStartCumulative;
+      
+      // For today, only show hours from current hour onwards
+      const startHour = (day === 0) ? currentHour : 0;
+      
+      for (let hour = startHour; hour < 24; hour++) {
+        const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${hour}`;
+        const hourCount = reviewsByDateHour.get(dateKey) || 0;
+        dayCount += hourCount;
+        dayCumulative += hourCount;
+        dayHours.push({ hour, count: hourCount, cumulative: dayCumulative });
+      }
+      
+      // Update week cumulative (only count future hours for today)
+      if (day === 0) {
+        // For today, only count future hours
+        weekCumulative += dayCount;
+      } else {
+        weekCumulative += dayCount;
+      }
+      
+      weekDays.push({ 
+        date, 
+        count: dayCount, 
+        cumulative: weekCumulative,
+        hours: dayHours,
+      });
+    }
+    
+    return {
+      today: todayHours,
+      week: weekDays,
+      cardsDueNow,
+    };
+  } catch (error: any) {
+    if (error?.code === 'permission-denied') {
+      console.warn('Permission denied getting review forecast. Make sure Firestore rules are deployed and user is authenticated.');
+    } else {
+      console.error('Error getting review forecast:', error);
+    }
+    return { today: [], week: [], cardsDueNow: 0 };
+  }
+}
+
+/**
+ * Get next review forecast (earliest scheduled review date) - legacy function
+ */
+export async function getNextReviewForecast(userId: string): Promise<{
+  nextReviewDate: Date | null;
+  cardsDue: number;
+}> {
+  try {
+    const forecast = await getReviewForecast(userId);
+    const nextReviewDate = forecast.today.length > 0 && forecast.today[0].count > 0
+      ? new Date(new Date().setHours(forecast.today[0].hour, 0, 0, 0))
+      : (forecast.week.find(d => d.count > 0)?.date || null);
+    
+    return {
+      nextReviewDate,
+      cardsDue: forecast.cardsDueNow,
+    };
+  } catch (error) {
+    console.error('Error getting next review forecast:', error);
+    return { nextReviewDate: null, cardsDue: 0 };
+  }
+}
+
+/**
  * Get flashcard statistics
  */
 export async function getFlashcardStats(userId: string): Promise<{
@@ -655,9 +995,20 @@ export async function getFlashcardStats(userId: string): Promise<{
   byStory: Record<string, number>;
 }> {
   try {
+    if (!userId) {
+      console.warn('getFlashcardStats: userId is required');
+      return {
+        dueToday: 0,
+        newToday: 0,
+        learned: 0,
+        total: 0,
+        byStory: {},
+      };
+    }
+    
+    // Get all flashcards (don't filter by isActive in query - handle in loop for backward compatibility)
     const flashcardsRef = collection(getDb(), 'users', userId, 'flashcards');
-    const q = query(flashcardsRef, where('isActive', '==', true));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(flashcardsRef);
     
     const now = new Date();
     let dueToday = 0;
@@ -666,24 +1017,70 @@ export async function getFlashcardStats(userId: string): Promise<{
     const byStory: Record<string, number> = {};
     
     for (const docSnap of snapshot.docs) {
-      const data = docSnap.data();
-      const srs = await getFlashcardSRS(userId, docSnap.id);
-      if (!srs) continue;
-      
-      if (srs.dueAt <= now) {
-        if (srs.repetitions === 0) {
-          newToday++;
+      try {
+        const data = docSnap.data();
+        
+        // Skip inactive cards (default to active if field doesn't exist for backward compatibility)
+        if (data.isActive === false) continue;
+        
+        const srs = await getFlashcardSRS(userId, docSnap.id);
+        
+        // If SRS is missing, create it (for backward compatibility)
+        if (!srs) {
+          try {
+            const defaultSRS = getDefaultSRS();
+            const srsRef = doc(getDb(), 'users', userId, 'flashcards', docSnap.id, 'srs', 'data');
+            await setDoc(srsRef, {
+              flashcardId: docSnap.id,
+              dueAt: Timestamp.fromDate(defaultSRS.dueAt),
+              intervalDays: defaultSRS.intervalDays,
+              easeFactor: defaultSRS.easeFactor,
+              repetitions: defaultSRS.repetitions,
+              lastReviewedAt: null,
+              lastTypeAAt: null,
+              lastTypeBAt: null,
+            });
+            // Re-fetch SRS
+            const newSrs = await getFlashcardSRS(userId, docSnap.id);
+            if (!newSrs) continue;
+            
+            // Use the new SRS for calculations
+            if (newSrs.dueAt <= now) {
+              if (newSrs.repetitions === 0) {
+                newToday++;
+              } else {
+                dueToday++;
+              }
+            }
+            if (newSrs.repetitions >= 3) {
+              learned++;
+            }
+          } catch (srsErr) {
+            console.warn(`Failed to create SRS for stats calculation: ${docSnap.id}`, srsErr);
+            continue;
+          }
         } else {
-          dueToday++;
+          // SRS exists, use it for calculations
+          if (srs.dueAt <= now) {
+            if (srs.repetitions === 0) {
+              newToday++;
+            } else {
+              dueToday++;
+            }
+          }
+          
+          if (srs.repetitions >= 3) {
+            learned++;
+          }
         }
-      }
-      
-      if (srs.repetitions >= 3) {
-        learned++;
-      }
-      
-      if (data.storyId) {
-        byStory[data.storyId] = (byStory[data.storyId] || 0) + 1;
+        
+        if (data.storyId) {
+          byStory[data.storyId] = (byStory[data.storyId] || 0) + 1;
+        }
+      } catch (cardError) {
+        console.warn(`Error processing flashcard ${docSnap.id} for stats:`, cardError);
+        // Continue with next card
+        continue;
       }
     }
     
@@ -694,8 +1091,14 @@ export async function getFlashcardStats(userId: string): Promise<{
       total: snapshot.size,
       byStory,
     };
-  } catch (error) {
-    console.error('Error getting flashcard stats:', error);
+  } catch (error: any) {
+    // Check if it's a permission error
+    if (error?.code === 'permission-denied') {
+      console.error('Permission denied getting flashcard stats. Make sure Firestore rules are deployed and user is authenticated.');
+    } else {
+      console.error('Error getting flashcard stats:', error);
+    }
+    // Return default values instead of throwing
     return {
       dueToday: 0,
       newToday: 0,
@@ -711,6 +1114,22 @@ export async function getFlashcardStats(userId: string): Promise<{
  */
 export async function getFlashcardPreferences(userId: string): Promise<FlashcardPreferences> {
   try {
+    if (!userId) {
+      console.warn('getFlashcardPreferences: userId is required');
+      // Return default preferences
+      return {
+        id: 'default',
+        userId: userId || '',
+        maxNewCardsPerDay: 15,
+        maxReviewsPerDay: 100,
+        learningLanguageCode: 'de',
+        showBackAutomatically: false,
+        sessionGoalCards: 20,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+    }
+    
     const prefsRef = doc(getDb(), 'users', userId, 'flashcardPreferences', 'settings');
     const prefsDoc = await getDoc(prefsRef);
     
@@ -749,9 +1168,14 @@ export async function getFlashcardPreferences(userId: string): Promise<Flashcard
     });
     
     return defaultPrefs;
-  } catch (error) {
-    console.error('Error getting flashcard preferences:', error);
-    // Return defaults on error
+  } catch (error: any) {
+    // Check if it's a permission error
+    if (error?.code === 'permission-denied') {
+      console.warn('Permission denied getting flashcard preferences. Using defaults. Make sure Firestore rules are deployed and user is authenticated.');
+    } else {
+      console.error('Error getting flashcard preferences:', error);
+    }
+    // Return defaults on error instead of throwing
     return {
       id: 'default',
       userId,

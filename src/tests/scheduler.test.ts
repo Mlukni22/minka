@@ -1,5 +1,6 @@
 // src/tests/scheduler.test.ts
 import { scheduleRunner } from "../scheduler/scheduleRunner";
+import { getDueCards } from "../sr-module/srAlgorithm";
 
 describe("scheduleRunner", () => {
   it("calls callback with due cards and returns correct count", async () => {
@@ -120,4 +121,3 @@ describe("scheduleRunner", () => {
     expect(result.dueCards[0].id).toBe("c-1");
   });
 });
-

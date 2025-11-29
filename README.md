@@ -80,7 +80,7 @@ src/
 3. **Enable Firestore**: Database for user data
 4. **Get Config**: Copy configuration to `.env.local`
 
-See [SETUP.md](SETUP.md) for detailed instructions.
+See [SETUP.md](/docs/setup/SETUP.md) for detailed instructions.
 
 ## 🎨 Technology Stack
 
@@ -196,7 +196,7 @@ vercel
 
 ## 📞 Support
 
-- **Documentation**: Check [SETUP.md](SETUP.md) for setup issues
+- **Documentation**: Check [SETUP.md](/docs/setup/SETUP.md) or the [issues folder](/docs/issues/) for setup issues
 - **Issues**: Report bugs via GitHub Issues
 - **Questions**: Contact the maintainer
 

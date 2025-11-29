@@ -32,7 +32,8 @@ cd minka
 npm install
 
 # Set up environment variables
-cp env-template.txt .env.local
+cp env-template.txt .env.local (on Linux or with the Git CMD)
+copy env-template.txt .env.local (on Windows)      
 # Edit .env.local with your Firebase configuration
 
 # Start development server

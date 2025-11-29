@@ -863,7 +863,7 @@ export async function getReviewForecast(userId: string): Promise<{
         const srs = await getFlashcardSRS(userId, docSnap.id);
         if (!srs) continue;
         
-        const dueAt = srs.dueAt instanceof Date ? srs.dueAt : srs.dueAt.toDate();
+        const dueAt = srs.dueAt;
         
         // Count cards due now
         if (dueAt <= now) {

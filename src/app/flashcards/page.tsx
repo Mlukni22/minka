@@ -466,7 +466,7 @@ export default function FlashcardsPage() {
                 }
                 
                 const now = Date.now();
-                const dueAt = srs?.dueAt?.toDate()?.getTime() || now;
+                const dueAt = srs?.dueAt?.getTime() || now;
                 const isNew = (srs?.repetitions || 0) === 0;
                 const contextSentence = (fc.contextSentence || fc.exampleSentence || '').toString().trim();
                 
@@ -552,7 +552,7 @@ export default function FlashcardsPage() {
       setQueue(buildQueue(cards)); 
       setIdx(0);
     }
-  }, [cards.length]);
+  }, [cards]);
   
   // Helper function to sync cards to Firestore (called when cards are updated)
   async function syncCardsToFirestore(cardsToSync: Card[]) {
@@ -950,7 +950,7 @@ function EmptyState({ stats, hasCards, onStart, onImport }:{
         <div className="text-6xl mb-4">📚</div>
         <h2 className="text-3xl font-bold text-[#2E3A28] mb-3">Welcome to Flashcards!</h2>
         <p className="text-lg text-[#6A7A6A] mb-6">
-          You don't have any flashcards yet. Complete story lessons to add vocabulary cards automatically!
+          You don&pos;t have any flashcards yet. Complete story lessons to add vocabulary cards automatically!
         </p>
         
         <div className="bg-white/60 backdrop-blur border border-white shadow-lg rounded-2xl p-6 mb-8">

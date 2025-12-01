@@ -30,40 +30,40 @@ export default function StoryChaptersPage() {
         return;
       }
 
+    const loadStoryData = async (uid: string) => {
+      try {
+        const [storyData, chaptersData, progress, allChapterProgress] = await Promise.all([
+          getStoryById(storyId),
+          getStoryChapters(storyId),
+          getUserStoryProgress(uid, storyId),
+          getAllUserChapterProgress(uid),
+        ]);
+
+        if (!storyData) {
+          router.push('/stories');
+          return;
+        }
+
+        setStory(storyData);
+        setChapters(chaptersData);
+        setStoryProgress(progress);
+        
+        // Filter chapter progress for this story's chapters
+        const chapterIds = chaptersData.map(ch => ch.id);
+        setChapterProgress(allChapterProgress.filter(cp => chapterIds.includes(cp.chapterId)));
+      } catch (error) {
+        console.error('Error loading story:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
       setUserId(firebaseUser.uid);
       await loadStoryData(firebaseUser.uid);
     });
 
     return () => unsubscribe();
   }, [router, storyId]);
-
-  const loadStoryData = async (uid: string) => {
-    try {
-      const [storyData, chaptersData, progress, allChapterProgress] = await Promise.all([
-        getStoryById(storyId),
-        getStoryChapters(storyId),
-        getUserStoryProgress(uid, storyId),
-        getAllUserChapterProgress(uid),
-      ]);
-
-      if (!storyData) {
-        router.push('/stories');
-        return;
-      }
-
-      setStory(storyData);
-      setChapters(chaptersData);
-      setStoryProgress(progress);
-      
-      // Filter chapter progress for this story's chapters
-      const chapterIds = chaptersData.map(ch => ch.id);
-      setChapterProgress(allChapterProgress.filter(cp => chapterIds.includes(cp.chapterId)));
-    } catch (error) {
-      console.error('Error loading story:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getChapterProgress = (chapterId: string): UserChapterProgress | undefined => {
     return chapterProgress.find(cp => cp.chapterId === chapterId);

@@ -32,7 +32,8 @@ cd minka
 npm install
 
 # Set up environment variables
-cp env-template.txt .env.local
+cp env-template.txt .env.local (on Linux or with the Git CMD)
+copy env-template.txt .env.local (on Windows)      
 # Edit .env.local with your Firebase configuration
 
 # Start development server
@@ -79,7 +80,7 @@ src/
 3. **Enable Firestore**: Database for user data
 4. **Get Config**: Copy configuration to `.env.local`
 
-See [SETUP.md](SETUP.md) for detailed instructions.
+See [SETUP.md](/docs/setup/SETUP.md) for detailed instructions.
 
 ## 🎨 Technology Stack
 
@@ -195,7 +196,7 @@ vercel
 
 ## 📞 Support
 
-- **Documentation**: Check [SETUP.md](SETUP.md) for setup issues
+- **Documentation**: Check [SETUP.md](/docs/setup/SETUP.md) or the [issues folder](/docs/issues/) for setup issues
 - **Issues**: Report bugs via GitHub Issues
 - **Questions**: Contact the maintainer
 

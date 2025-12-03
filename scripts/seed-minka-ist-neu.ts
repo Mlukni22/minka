@@ -26,6 +26,15 @@ if (!getApps().length) {
   app = getApps()[0];
 }
 
+// Load environment variables
+if (typeof require !== 'undefined') {
+  try {
+    require('dotenv').config({ path: '.env.local' });
+  } catch (e) {
+    console.log("❌ An error occured : ",e);
+  }
+}
+
 const db = getFirestore(app);
 
 const story = {
@@ -350,15 +359,6 @@ async function seedStory() {
   } catch (error) {
     console.error('❌ Error seeding story:', error);
     process.exit(1);
-  }
-}
-
-// Load environment variables
-if (typeof require !== 'undefined') {
-  try {
-    require('dotenv').config({ path: '.env.local' });
-  } catch (e) {
-    // dotenv not available, assume env vars are set
   }
 }
 

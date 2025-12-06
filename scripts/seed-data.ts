@@ -9,6 +9,15 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore, collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
+// Load environment variables
+if (typeof require !== 'undefined') {
+  try {
+    require('dotenv').config({ path: '.env.local' });
+  } catch (e) {
+    console.log("❌ Error: ",e);
+  }
+}
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -211,15 +220,6 @@ async function seedStories() {
 
   console.log('✨ Seeding complete!');
   process.exit(0);
-}
-
-// Load environment variables
-if (typeof require !== 'undefined') {
-  try {
-    require('dotenv').config({ path: '.env.local' });
-  } catch (e) {
-    // dotenv not available, assume env vars are set
-  }
 }
 
 seedStories().catch((error) => {

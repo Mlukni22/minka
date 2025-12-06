@@ -36,6 +36,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Minka - Learn German Through Stories",
   description: "Interactive, story-based language learning app that teaches German through emotional immersion and spaced repetition",
+  icons: {
+      icon: "/favicon.ico",
+      apple: "/apple-touch-icon.png",
+    },
 };
 
 export default function RootLayout({

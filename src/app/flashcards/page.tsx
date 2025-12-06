@@ -636,7 +636,7 @@ export default function FlashcardsPage() {
   if (showSummary) {
     return (
       <Shell>
-        <Header onBack={() => router.push('/')} />
+        <Header onBack={() => router.push('/dashboard')} />  {/* Normally, we are connected here. If really not, redirect to auth/login */}
         <SessionSummary 
           stats={sessionStats}
           onContinue={() => {
@@ -677,7 +677,7 @@ export default function FlashcardsPage() {
 
   return (
     <Shell>
-      <Header onBack={() => router.push('/')} />
+      <Header onBack={() => router.push('/dashboard')} />  {/* Normally, we are connected here. If really not, redirect to auth/login */}
       <main role="main" aria-label={t.flashcardStudy.studySession}>
         
         {/* Progress Bar */}

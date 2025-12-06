@@ -30,7 +30,7 @@ import { detectSeparableVerbFromClick, extractWordsForDetection } from '@/lib/tr
 export default function ChapterReaderPage() {
   const router = useRouter();
   const params = useParams();
-  const storyId = params.id as string;
+  const storyId = params.id as string;  // work with minka-ist-neu only :: miss chapters in Firebase !
   const chapterNumber = parseInt(params.chapter_number as string, 10);
 
   const [story, setStory] = useState<Story | null>(null);

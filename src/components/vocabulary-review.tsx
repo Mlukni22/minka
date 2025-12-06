@@ -181,7 +181,7 @@ export function VocabularyReview({ items: propItems, onComplete, onBack }: Vocab
                       className="bg-red-100 hover:bg-red-200 text-red-700 border-2 border-red-300"
                     >
                       <XCircle className="h-5 w-5 mr-2" />
-                      Didn't Know
+                      Didn&apos;t Know
                     </Button>
 
                     <Button
